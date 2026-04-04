@@ -1,0 +1,217 @@
+<h2>Design: CLI & Binary Distribution</h2>
+<p class="subtitle">Section 4 of 6 — The Go CLI, shell wrapper, and pre-built binaries</p>
+
+<div class="section">
+<h3>Shell Wrapper</h3>
+<div class="mockup">
+<div class="mockup-header">bin/dotfiles — the entry point on every machine</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#8b949e">#!/usr/bin/env bash</span>
+<span style="color:#8b949e"># Auto-detect platform/arch then run the right binary</span>
+<span style="color:#8b949e"># This is the ONLY thing that needs to run on a fresh machine</span>
+
+DOTFILES_DIR="$(cd "$(dirname "$0")/.." &amp;&amp; pwd)"
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+
+case "$OS" in
+  darwin) OS="darwin" ;;
+  linux)  OS="linux" ;;
+esac
+
+case "$ARCH" in
+  x86_64)       ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+BINARY="${DOTFILES_DIR}/bin/dotfiles-${OS}-${ARCH}"
+
+if [[ ! -x "$BINARY" ]]; then
+  echo "No binary for ${OS}/${ARCH}. Run: cd cli &amp;&amp; make build-all"
+  exit 1
+fi
+
+exec "$BINARY" "$@"
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>CLI Command Tree</h3>
+<div class="mockup">
+<div class="mockup-header">Full command surface</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#f0883e">dotfiles</span>
+|
++-- <span style="color:#79c0ff">setup</span>                          <span style="color:#8b949e"># First-run wizard</span>
+|   <span style="color:#8b949e"># Detects platform, asks role, picks modules,</span>
+|   <span style="color:#8b949e"># sets git identity, writes ~/.dotfiles.json</span>
+|   <span style="color:#8b949e"># Then runs: bootstrap + module install</span>
+|
++-- <span style="color:#79c0ff">bootstrap</span>                      <span style="color:#8b949e"># Create symlinks for core + enabled modules</span>
+|   +-- --force                     <span style="color:#8b949e"># Skip confirmation prompts</span>
+|   +-- --dry-run                   <span style="color:#8b949e"># Show what would be linked</span>
+|
++-- <span style="color:#79c0ff">update</span>                         <span style="color:#8b949e"># Pull latest, rebuild cache, re-link</span>
+|   +-- --check                     <span style="color:#8b949e"># Just check, don't apply</span>
+|   +-- --diff                      <span style="color:#8b949e"># Show what changed before applying</span>
+|
++-- <span style="color:#79c0ff">module</span>                         <span style="color:#8b949e"># Module management</span>
+|   +-- list                        <span style="color:#8b949e"># All modules + enabled/disabled status</span>
+|   +-- info &lt;name&gt;                 <span style="color:#8b949e"># Module details, sections, install recipes</span>
+|   +-- enable &lt;name&gt;               <span style="color:#8b949e"># Add to profile, link configs</span>
+|   +-- disable &lt;name&gt;              <span style="color:#8b949e"># Remove from profile, unlink configs</span>
+|   +-- install &lt;name&gt;              <span style="color:#8b949e"># Install module's packages</span>
+|   +-- install --all               <span style="color:#8b949e"># Install all enabled modules' packages</span>
+|   +-- override &lt;section&gt;          <span style="color:#8b949e"># Clone section to overrides/</span>
+|   |   +-- --local                 <span style="color:#8b949e"># Clone to ~/.dotfiles/local/ instead</span>
+|   |   +-- --disable               <span style="color:#8b949e"># Just disable, don't clone</span>
+|   +-- reset &lt;section&gt;             <span style="color:#8b949e"># Remove override, restore default</span>
+|   +-- create &lt;name&gt;               <span style="color:#8b949e"># Scaffold new module from template</span>
+|   +-- validate [name]             <span style="color:#8b949e"># Validate module.json + section guards</span>
+|
++-- <span style="color:#79c0ff">profile</span>                        <span style="color:#8b949e"># Profile management</span>
+|   +-- show                        <span style="color:#8b949e"># Display current profile</span>
+|   +-- edit                        <span style="color:#8b949e"># Open ~/.dotfiles.json in $EDITOR</span>
+|   +-- wizard                      <span style="color:#8b949e"># Re-run the interactive profile wizard</span>
+|   +-- export                      <span style="color:#8b949e"># Export profile to share as example</span>
+|
++-- <span style="color:#79c0ff">platform</span>                       <span style="color:#8b949e"># Show detected platform info</span>
+|
++-- <span style="color:#79c0ff">doctor</span>                         <span style="color:#8b949e"># Health check</span>
+|   <span style="color:#8b949e"># Validates: symlinks intact, modules valid,</span>
+|   <span style="color:#8b949e"># profile schema correct, no broken deps,</span>
+|   <span style="color:#8b949e"># binary matches platform</span>
+|
++-- <span style="color:#79c0ff">cache</span>                          <span style="color:#8b949e"># Cache management</span>
+|   +-- rebuild                     <span style="color:#8b949e"># Regenerate shell cache from profile</span>
+|   +-- clear                       <span style="color:#8b949e"># Clear all cached state</span>
+|
++-- <span style="color:#79c0ff">sync</span>                           <span style="color:#8b949e"># Sync status</span>
+    +-- status                      <span style="color:#8b949e"># Show sync state across machines</span>
+    +-- check                       <span style="color:#8b949e"># Run background fetch + update cache</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Binary Distribution</h3>
+<div class="mockup">
+<div class="mockup-header">Build and ship pre-compiled binaries</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#79c0ff">Build targets (in cli/Makefile):</span>
+
+  dotfiles-darwin-arm64     <span style="color:#8b949e"># macOS Apple Silicon</span>
+  dotfiles-darwin-amd64     <span style="color:#8b949e"># macOS Intel</span>
+  dotfiles-linux-arm64      <span style="color:#8b949e"># Linux ARM</span>
+  dotfiles-linux-amd64      <span style="color:#8b949e"># Linux x86_64 (also WSL)</span>
+
+<span style="color:#79c0ff">Build workflow:</span>
+
+  1. Develop in cli/
+  2. <span style="color:#f0883e">make build-all</span>           <span style="color:#8b949e"># Cross-compile all 4 targets</span>
+  3. Binaries land in bin/    <span style="color:#8b949e"># Committed to repo</span>
+  4. git push                 <span style="color:#8b949e"># Machines get new binary on next pull</span>
+
+<span style="color:#79c0ff">Why commit binaries?</span>
+
+  - Zero build deps on target machines (no Go toolchain needed)
+  - git pull = instant update
+  - Binaries are ~5-8MB each (Go static linking)
+  - 4 binaries = ~25MB total, acceptable for a dotfiles repo
+
+<span style="color:#79c0ff">Future option:</span>
+
+  GitHub Releases + auto-download on update
+  (but committed binaries are simpler for now)
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Module Registries</h3>
+<div class="mockup">
+<div class="mockup-header">Configurable registries — public and private</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#79c0ff">In ~/.dotfiles.json or repo config:</span>
+
+{
+  "registries": [
+    {
+      "name": "default",
+      "url": "https://github.com/dotfiles-modules"
+    },
+    {
+      "_comment": "Company internal modules",
+      "name": "acme-corp",
+      "url": "git@github.com:acme-corp/dotfiles-modules.git",
+      "private": true
+    }
+  ]
+}
+
+<span style="color:#79c0ff">Usage:</span>
+
+  dotfiles module search kubectl       <span style="color:#8b949e"># Search all registries</span>
+  dotfiles module add acme-corp/k8s    <span style="color:#8b949e"># Install from private registry</span>
+  dotfiles module add community/fzf    <span style="color:#8b949e"># Install from public registry</span>
+
+<span style="color:#79c0ff">How it works:</span>
+
+  - Registries are git repos containing modules
+  - CLI clones/pulls registry, copies module into modules/
+  - Private registries use existing SSH/git auth
+  - Businesses maintain curated module sets for teams
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>First-Run Experience</h3>
+<div class="mockup">
+<div class="mockup-header">What happens on a fresh machine</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#8b949e"># 1. Clone</span>
+$ git clone git@github.com:user/dotfiles.git ~/code/dotfiles
+
+<span style="color:#8b949e"># 2. Run the wrapper (no build step needed)</span>
+$ ~/code/dotfiles/bin/dotfiles setup
+
+<span style="color:#3fb950">  +----------------------------------+</span>
+<span style="color:#3fb950">  |   dotfiles setup -- welcome!      |</span>
+<span style="color:#3fb950">  +----------------------------------+</span>
+
+  Platform detected: <span style="color:#79c0ff">linux (ubuntu 24.04, wsl, amd64)</span>
+
+  Role? [personal/work/both]: <span style="color:#f0883e">both</span>
+
+  Modules -- select what to enable:
+    <span style="color:#3fb950">[x]</span> git           Essential git aliases and config
+    <span style="color:#3fb950">[x]</span> modern-tools  eza, bat, ripgrep, fd, zoxide
+    <span style="color:#3fb950">[x]</span> kubernetes    kubectl, helm, k9s
+    <span style="color:#3fb950">[x]</span> cloud         AWS, GCP, Azure CLIs
+    <span style="color:#3fb950">[x]</span> containers    Docker, Podman
+    <span style="color:#3fb950">[x]</span> python        Python, pyenv, pip aliases
+    <span style="color:#3fb950">[x]</span> node          Node, nvm, npm aliases
+    [ ] rust          Cargo, rustup aliases
+    [ ] vim           Vim/Neovim config
+    [ ] tmux          Tmux config and aliases
+
+  Git identity:
+    Name: <span style="color:#f0883e">Anton Swartz</span>
+    Email: <span style="color:#f0883e">anton@work.com</span>
+
+  Install packages now? [y/n]: <span style="color:#f0883e">y</span>
+
+  <span style="color:#3fb950">OK</span> Profile saved to ~/.dotfiles.json
+  <span style="color:#3fb950">OK</span> Core symlinks created (12 files)
+  <span style="color:#3fb950">OK</span> Module configs linked (3 conflicts resolved)
+  <span style="color:#3fb950">OK</span> Packages installed (kubernetes, cloud, containers)
+  <span style="color:#3fb950">OK</span> Shell cache built
+
+  <span style="color:#79c0ff">Reload your shell:</span> source ~/.bash_profile
+</div>
+</div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Fixed tree rendering. Does the CLI section look good now?</p>

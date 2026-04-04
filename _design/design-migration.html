@@ -1,0 +1,157 @@
+<h2>Design: Migration Strategy</h2>
+<p class="subtitle">Section 6 of 6 — How to get from current state to the new architecture</p>
+
+<div class="section">
+<h3>Guiding Principle</h3>
+<div style="background: rgba(121,192,255,0.08); border: 1px solid rgba(121,192,255,0.2); border-radius: 8px; padding: 1.2rem;">
+  <p style="color: #c9d1d9; line-height: 1.8; margin: 0;"><strong>Your shell must work at every step.</strong> No big-bang migration. Each phase produces a working dotfiles setup that you can deploy to your 6 machines. If something goes wrong, you can stop at any phase and still have a functional system.</p>
+</div>
+</div>
+
+<div class="section">
+<h3>Migration Phases</h3>
+
+<div style="position: relative; padding-left: 2rem; border-left: 3px solid rgba(121,192,255,0.3); margin-left: 0.5rem;">
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">1</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Scaffold &amp; Core</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Create the new directory structure. Build the core loader with minimal mode and section guard system. The new <code>.bash_profile</code> sources <code>core/</code> files. No modules yet — core just provides what the current flat files do.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Create core/, modules/, overrides/, profiles/, platform/, setup/, cli/, bin/</li>
+    <li>Extract platform detection into core/platform.sh</li>
+    <li>Build core/loader.sh with dotfiles_section() and minimal mode</li>
+    <li>Move essential PATH/exports/aliases/functions into core/</li>
+    <li>Move platform-specific code into platform/</li>
+    <li>New .bash_profile that sources the new structure</li>
+    <li><span style="color: #3fb950;">Test:</span> shell works identically to before</li>
+  </ul>
+</div>
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">2</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Extract Modules</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Break the current monolithic files into self-contained modules. Each module gets a <code>module.json</code>, section guards, and its own shell files.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Split .aliases (426 lines) into ~10 modules (git, docker, k8s, python, node, etc.)</li>
+    <li>Split .functions (1,385 lines) into corresponding modules + core essentials</li>
+    <li>Create module.json for each with sections, install recipes, platform support</li>
+    <li>Add dotfiles_section() guards to all shell blocks</li>
+    <li>Move config files (.gitconfig, .vimrc, .tmux.conf) into their modules</li>
+    <li>Core loader discovers and loads modules from modules/</li>
+    <li><span style="color: #3fb950;">Test:</span> all aliases/functions still work, now loaded via module system</li>
+  </ul>
+</div>
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">3</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Profile System</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Implement the profile-driven loading. Machines can now choose which modules to enable.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Define ~/.dotfiles.json schema</li>
+    <li>Loader reads profile, builds enabled/disabled lists</li>
+    <li>Implement shell cache (CLI generates sourceable file from JSON)</li>
+    <li>Implement minimal mode with env triggers</li>
+    <li>Create example profiles for your 6 machines</li>
+    <li><span style="color: #3fb950;">Test:</span> different profiles produce different shell environments</li>
+  </ul>
+</div>
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">4</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Go CLI Overhaul</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Rebuild the Go CLI from the existing dotfiles-cli. New command tree, module management, profile wizard, override system.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Restructure into cli/ with new command tree</li>
+    <li>Implement: setup, bootstrap, update, module *, profile *, doctor</li>
+    <li>Implement: override clone, section extraction</li>
+    <li>Implement: config conflict resolution (backup/merge/skip/adopt)</li>
+    <li>Implement: minimal mode CLI commands</li>
+    <li>Build shell wrapper (bin/dotfiles)</li>
+    <li>Cross-compile for all 4 targets</li>
+    <li>Optional: bubbletea TUI for module browse</li>
+    <li><span style="color: #3fb950;">Test:</span> full setup workflow on a fresh machine</li>
+  </ul>
+</div>
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">5</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Registry &amp; Sync</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Add registry support for marketplace modules, sync checking, and multi-machine awareness.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Implement registry add/remove/list/sync CLI commands</li>
+    <li>Module search and install from registries</li>
+    <li>Private registry support (git SSH auth)</li>
+    <li>Sync check: background git fetch, cached state, shell notification</li>
+    <li><span style="color: #3fb950;">Test:</span> install a module from a test registry</li>
+  </ul>
+</div>
+
+<div style="margin-bottom: 2rem;">
+  <div style="position: absolute; left: -0.75rem; width: 1.2rem; height: 1.2rem; background: #79c0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #0d1117; font-weight: bold;">6</div>
+  <h4 style="color: #79c0ff; margin-top: 0;">Claude Context &amp; Cleanup</h4>
+  <p style="color: #c9d1d9; line-height: 1.6;">Add scoped CLAUDE.md files, .claudeignore, clean up old flat files, update documentation.</p>
+  <ul style="color: #8b949e; line-height: 1.6; padding-left: 1.2rem;">
+    <li>Write hierarchical CLAUDE.md files for each directory</li>
+    <li>Create .claudeignore</li>
+    <li>Remove old flat files (.aliases, .functions, .platform, etc.)</li>
+    <li>Update README.md for new architecture</li>
+    <li>Write MODULE-SPEC.md for marketplace authors</li>
+    <li>Update bootstrap.sh symlink list</li>
+    <li><span style="color: #3fb950;">Test:</span> full deploy on all 6 machines</li>
+  </ul>
+</div>
+
+</div>
+</div>
+
+<div class="section">
+<h3>Rollback Safety</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+  <div style="background: rgba(55,180,100,0.08); border: 1px solid rgba(55,180,100,0.2); border-radius: 8px; padding: 1rem;">
+    <h4 style="color: #3fb950; margin-top: 0; font-size: 0.9rem;">Git Branch</h4>
+    <p style="color: #c9d1d9; font-size: 0.85rem; line-height: 1.5;">All work on a feature branch. Main stays working. If anything breaks: <code>git checkout main</code></p>
+  </div>
+  <div style="background: rgba(55,180,100,0.08); border: 1px solid rgba(55,180,100,0.2); border-radius: 8px; padding: 1rem;">
+    <h4 style="color: #3fb950; margin-top: 0; font-size: 0.9rem;">Phase Gates</h4>
+    <p style="color: #c9d1d9; font-size: 0.85rem; line-height: 1.5;">Each phase is a merge to main. Deploy one phase at a time to machines. Verify before next.</p>
+  </div>
+  <div style="background: rgba(55,180,100,0.08); border: 1px solid rgba(55,180,100,0.2); border-radius: 8px; padding: 1rem;">
+    <h4 style="color: #3fb950; margin-top: 0; font-size: 0.9rem;">Backward Compat</h4>
+    <p style="color: #c9d1d9; font-size: 0.85rem; line-height: 1.5;">Phases 1-3 can coexist with old files. Old .bash_profile still works until phase 6 cleanup.</p>
+  </div>
+</div>
+</div>
+
+<div class="section">
+<h3>Deployment Order</h3>
+<div class="mockup">
+<div class="mockup-header">Roll out to machines incrementally</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#79c0ff">Phase 1-3: Test on 1 WSL machine first</span>
+  - Fastest to rebuild if something breaks
+  - You're already on this machine (presumably)
+  - Validate core + modules + profile system
+
+<span style="color:#79c0ff">Phase 4: Deploy CLI to all machines</span>
+  - git pull gets them the new binary
+  - Run 'dotfiles setup' on each to generate profile
+
+<span style="color:#79c0ff">Phase 5-6: Roll out to remaining 5 machines</span>
+  - One at a time, verify each
+  - Macbooks last (most different platform, most to test)
+
+<span style="color:#79c0ff">Estimated module breakdown from current files:</span>
+
+  .aliases (426 lines) splits into ~12 modules:
+    git, docker, kubernetes, cloud, python, node,
+    navigation, modern-tools, safety, network, system, terraform
+
+  .functions (1,385 lines) splits into:
+    ~300 lines core/functions.sh (essentials)
+    ~1,085 lines across modules (cloud, security, containers, etc.)
+</div>
+</div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">That's all 6 sections. Does the migration strategy look solid?</p>

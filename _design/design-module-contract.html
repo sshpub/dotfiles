@@ -1,0 +1,164 @@
+<h2>Design: Module Contract</h2>
+<p class="subtitle">Section 3 of 6 — The module.json spec and module structure</p>
+
+<div class="section">
+<h3>Module Directory Structure</h3>
+<div class="mockup">
+<div class="mockup-header">A complete module example: modules/kubernetes/</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+modules/kubernetes/
+├── module.json          <span style="color:#8b949e"># Required — module metadata + install recipes</span>
+├── CLAUDE.md            <span style="color:#8b949e"># Optional — scoped context for Claude</span>
+├── aliases.sh           <span style="color:#8b949e"># Optional — aliases with section guards</span>
+├── functions.sh         <span style="color:#8b949e"># Optional — functions with section guards</span>
+├── completions.sh       <span style="color:#8b949e"># Optional — tab completion setup</span>
+├── path.sh              <span style="color:#8b949e"># Optional — PATH additions for this module</span>
+├── exports.sh           <span style="color:#8b949e"># Optional — environment variables</span>
+└── config/              <span style="color:#8b949e"># Optional — config files to symlink</span>
+    └── .kube/
+        └── config.template
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>module.json Specification</h3>
+<div class="mockup">
+<div class="mockup-header">modules/kubernetes/module.json</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+{
+  <span style="color:#79c0ff">"name"</span>: "kubernetes",
+  <span style="color:#79c0ff">"version"</span>: "1.0.0",
+  <span style="color:#79c0ff">"description"</span>: "Kubernetes CLI tools, aliases, and shell helpers",
+  <span style="color:#79c0ff">"author"</span>: "Anton Swartz",
+
+  <span style="color:#79c0ff">"_comment"</span>: "Platform compatibility — omit to mean 'all platforms'",
+  <span style="color:#79c0ff">"platforms"</span>: ["macos", "linux", "wsl"],
+
+  <span style="color:#79c0ff">"_comment_deps"</span>: "Other modules that must load before this one",
+  <span style="color:#79c0ff">"dependencies"</span>: ["containers"],
+
+  <span style="color:#79c0ff">"sections"</span>: {
+    <span style="color:#79c0ff">"kubernetes.core"</span>:   "Base kubectl aliases and functions",
+    <span style="color:#79c0ff">"kubernetes.helm"</span>:   "Helm package manager aliases",
+    <span style="color:#79c0ff">"kubernetes.k9s"</span>:    "K9s terminal UI shortcuts",
+    <span style="color:#79c0ff">"kubernetes.ctx"</span>:    "Context and namespace switching helpers"
+  },
+
+  <span style="color:#79c0ff">"shell"</span>: {
+    <span style="color:#79c0ff">"_comment"</span>: "Files to source — order matters",
+    <span style="color:#79c0ff">"load_order"</span>: ["exports.sh", "path.sh", "aliases.sh", "functions.sh", "completions.sh"]
+  },
+
+  <span style="color:#79c0ff">"install"</span>: {
+    <span style="color:#79c0ff">"macos"</span>: {
+      <span style="color:#79c0ff">"brew"</span>: ["kubectl", "helm", "k9s", "kubectx"]
+    },
+    <span style="color:#79c0ff">"linux"</span>: {
+      <span style="color:#79c0ff">"apt"</span>: ["kubectl"],
+      <span style="color:#79c0ff">"snap"</span>: ["helm --classic"],
+      <span style="color:#79c0ff">"binary"</span>: [
+        {
+          <span style="color:#79c0ff">"name"</span>: "k9s",
+          <span style="color:#79c0ff">"url"</span>: "https://github.com/derailed/k9s/releases/latest",
+          <span style="color:#79c0ff">"arch"</span>: { "amd64": "k9s_Linux_amd64.tar.gz", "arm64": "k9s_Linux_arm64.tar.gz" }
+        }
+      ]
+    },
+    <span style="color:#79c0ff">"wsl"</span>: {
+      <span style="color:#79c0ff">"_comment"</span>: "Inherits linux, plus Windows kubectl if desired",
+      <span style="color:#79c0ff">"inherit"</span>: "linux"
+    }
+  },
+
+  <span style="color:#79c0ff">"symlinks"</span>: {
+    <span style="color:#79c0ff">"_comment"</span>: "Config files to symlink to home directory",
+    <span style="color:#79c0ff">"config/.kube/config.template"</span>: "~/.kube/config.template"
+  },
+
+  <span style="color:#79c0ff">"hooks"</span>: {
+    <span style="color:#79c0ff">"post_install"</span>: "echo 'Run: kubectl cluster-info to verify'",
+    <span style="color:#79c0ff">"post_enable"</span>: "echo 'Kubernetes module enabled. Reload shell.'"
+  }
+}
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Minimal Module (simplest case)</h3>
+<div class="mockup">
+<div class="mockup-header">modules/modern-tools/module.json — aliases only, no install</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+{
+  <span style="color:#79c0ff">"name"</span>: "modern-tools",
+  <span style="color:#79c0ff">"version"</span>: "1.0.0",
+  <span style="color:#79c0ff">"description"</span>: "Aliases for eza, bat, ripgrep, fd, zoxide",
+
+  <span style="color:#79c0ff">"sections"</span>: {
+    <span style="color:#79c0ff">"modern-tools.listing"</span>: "eza/exa ls replacements",
+    <span style="color:#79c0ff">"modern-tools.cat"</span>:     "bat as cat replacement",
+    <span style="color:#79c0ff">"modern-tools.search"</span>:  "ripgrep and fd aliases",
+    <span style="color:#79c0ff">"modern-tools.cd"</span>:      "zoxide smart cd"
+  },
+
+  <span style="color:#79c0ff">"shell"</span>: {
+    <span style="color:#79c0ff">"load_order"</span>: ["aliases.sh"]
+  }
+}
+
+<span style="color:#8b949e">// That's it. No install block, no dependencies, no config files.</span>
+<span style="color:#8b949e">// Just drop a directory with module.json + aliases.sh and it works.</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Module Contract Rules</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+  <div style="background: rgba(55,180,100,0.08); border: 1px solid rgba(55,180,100,0.2); border-radius: 8px; padding: 1.2rem;">
+    <h4 style="color: #3fb950; margin-top: 0;">MUST</h4>
+    <ul style="color: #c9d1d9; line-height: 1.8; padding-left: 1.2rem;">
+      <li>Have a <code>module.json</code> with name, version, description</li>
+      <li>Use <code>dotfiles_section()</code> guards for all shell blocks</li>
+      <li>Use <code>{module_name}.{section}</code> naming for sections</li>
+      <li>Declare all sections in module.json</li>
+      <li>Be self-contained — no references to other module internals</li>
+    </ul>
+  </div>
+  <div style="background: rgba(255,120,100,0.08); border: 1px solid rgba(255,120,100,0.2); border-radius: 8px; padding: 1.2rem;">
+    <h4 style="color: #ff7b72; margin-top: 0;">MUST NOT</h4>
+    <ul style="color: #c9d1d9; line-height: 1.8; padding-left: 1.2rem;">
+      <li>Modify PATH outside of <code>path.sh</code></li>
+      <li>Source files from other modules directly</li>
+      <li>Write to files outside the module directory</li>
+      <li>Contain secrets or machine-specific values</li>
+      <li>Have side effects on load (no network calls, no prompts)</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="section">
+<h3>CLI Module Commands</h3>
+<div class="mockup">
+<div class="mockup-header">Module management via the CLI</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+dotfiles module list                          <span style="color:#8b949e"># List all available modules + status</span>
+dotfiles module info kubernetes               <span style="color:#8b949e"># Show module details + sections</span>
+dotfiles module enable kubernetes             <span style="color:#8b949e"># Enable in ~/.dotfiles.json</span>
+dotfiles module disable kubernetes            <span style="color:#8b949e"># Disable in ~/.dotfiles.json</span>
+dotfiles module install kubernetes            <span style="color:#8b949e"># Install module's packages</span>
+
+dotfiles module override kubernetes.helm          <span style="color:#8b949e"># Clone section → overrides/ (tracked)</span>
+dotfiles module override kubernetes.helm --local  <span style="color:#8b949e"># Clone section → ~/.dotfiles/local/</span>
+dotfiles module override kubernetes.helm --disable<span style="color:#8b949e"># Disable section, no clone</span>
+dotfiles module reset kubernetes.helm             <span style="color:#8b949e"># Remove override, restore module default</span>
+
+dotfiles module create my-custom              <span style="color:#8b949e"># Scaffold a new module from template</span>
+dotfiles module validate kubernetes           <span style="color:#8b949e"># Check module.json + section guards</span>
+</div>
+</div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Does this module contract feel right? Next up: the CLI and binary distribution.</p>

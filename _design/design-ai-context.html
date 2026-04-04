@@ -1,0 +1,153 @@
+<h2>Design: AI & Lightweight Shell Context</h2>
+<p class="subtitle">Section 5 of 6 — Minimal shell for AI tools + scoped CLAUDE.md for development</p>
+
+<div class="section">
+<h3>The Problem</h3>
+<div style="background: rgba(255,120,100,0.08); border: 1px solid rgba(255,120,100,0.2); border-radius: 8px; padding: 1.2rem;">
+  <p style="color: #c9d1d9; line-height: 1.8; margin: 0;">When Claude Code, Gemini CLI, Codex, OpenCode, or Grok spawn a shell to run commands, they inherit your full interactive shell: oh-my-posh prompt rendering, atuin history sync, completions for 20+ tools, lazy-loaded version managers, module aliases... all for what's usually <code>git diff</code> or <code>npm test</code>. This adds latency, wastes tokens on output noise, and can cause unexpected behavior in non-interactive contexts.</p>
+</div>
+</div>
+
+<div class="section">
+<h3>Minimal Mode — Built Into the Loader</h3>
+<div class="mockup">
+<div class="mockup-header">core/loader.sh — early exit for non-interactive contexts</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#8b949e"># Detect AI CLI tools, CI, or explicit minimal mode</span>
+<span style="color:#8b949e"># Check known env vars that AI tools set</span>
+
+DOTFILES_MINIMAL_TRIGGERS=(
+  CLAUDE_CODE
+  CODEX
+  GEMINI_CLI
+  OPENCODE
+  GROK_CLI
+  CI
+  GITHUB_ACTIONS
+  GITLAB_CI
+)
+
+dotfiles_is_minimal() {
+  [[ "$DOTFILES_MINIMAL" == "true" ]] &amp;&amp; return 0
+  for var in "${DOTFILES_MINIMAL_TRIGGERS[@]}"; do
+    [[ -n "${!var}" ]] &amp;&amp; return 0
+  done
+  return 1
+}
+
+<span style="color:#8b949e"># In .bash_profile:</span>
+if dotfiles_is_minimal; then
+  source "$DOTFILES_DIR/core/platform.sh"
+  source "$DOTFILES_DIR/core/path.sh"
+  source "$DOTFILES_DIR/core/exports.sh"
+  <span style="color:#8b949e"># Load any profile-specified minimal extras</span>
+  dotfiles_load_minimal_extras
+  return
+fi
+
+<span style="color:#8b949e"># ...full interactive loading continues below...</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Profile-Controlled Minimal Mode</h3>
+<div class="mockup">
+<div class="mockup-header">~/.dotfiles.json — fine-tune what AI tools get</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+{
+  "minimal_mode": {
+    "_comment": "Controls shell loading for AI tools and CI",
+
+    "_comment_triggers": "Env vars that activate minimal mode",
+    "env_triggers": [
+      "CLAUDE_CODE", "CODEX", "GEMINI_CLI",
+      "OPENCODE", "GROK_CLI",
+      "CI", "GITHUB_ACTIONS", "GITLAB_CI"
+    ],
+
+    "_comment_always": "Always loaded in minimal mode",
+    "always_load": ["platform", "path", "exports"],
+
+    "_comment_include": "Optional extras for minimal mode",
+    "include_modules": ["git"],
+
+    "_comment_never": "Never load in minimal mode",
+    "never_load": [
+      "prompt", "atuin", "ohmyposh", "starship",
+      "completions", "sync-check", "motd"
+    ]
+  }
+}
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>What Each Mode Gets</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+  <div style="background: rgba(55,180,100,0.08); border: 1px solid rgba(55,180,100,0.2); border-radius: 8px; padding: 1.2rem;">
+    <h4 style="color: #3fb950; margin-top: 0;">Minimal Mode (AI / CI)</h4>
+    <ul style="color: #c9d1d9; line-height: 1.8; padding-left: 1.2rem;">
+      <li>Platform detection</li>
+      <li>Correct PATH (tools are findable)</li>
+      <li>Environment variables (EDITOR, GOPATH, etc.)</li>
+      <li>Optionally: git aliases (if configured)</li>
+      <li>Target: &lt;50ms startup</li>
+    </ul>
+    <p style="color: #3fb950; margin-bottom: 0;">Clean, fast, no noise.</p>
+  </div>
+  <div style="background: rgba(121,192,255,0.08); border: 1px solid rgba(121,192,255,0.2); border-radius: 8px; padding: 1.2rem;">
+    <h4 style="color: #79c0ff; margin-top: 0;">Full Interactive Mode (you)</h4>
+    <ul style="color: #c9d1d9; line-height: 1.8; padding-left: 1.2rem;">
+      <li>Everything in minimal +</li>
+      <li>All enabled modules loaded</li>
+      <li>Prompt (oh-my-posh / starship / fallback)</li>
+      <li>Atuin history, completions, zoxide</li>
+      <li>Sync check notification</li>
+      <li>Target: &lt;200ms startup</li>
+    </ul>
+    <p style="color: #79c0ff; margin-bottom: 0;">Full experience, your shell.</p>
+  </div>
+</div>
+</div>
+
+<div class="section">
+<h3>CLI Commands for Minimal Mode</h3>
+<div class="mockup">
+<div class="mockup-header">Manage and test minimal mode</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+dotfiles minimal show              <span style="color:#8b949e"># Show what loads in minimal mode</span>
+dotfiles minimal test              <span style="color:#8b949e"># Spawn a minimal shell to try it out</span>
+dotfiles minimal add-trigger CURSOR <span style="color:#8b949e"># Add a new AI tool's env var</span>
+dotfiles minimal include git       <span style="color:#8b949e"># Add a module to minimal mode</span>
+dotfiles minimal exclude git       <span style="color:#8b949e"># Remove a module from minimal mode</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Scoped CLAUDE.md (Development Context)</h3>
+<p style="color:#c9d1d9; line-height: 1.6;">Separate concern from shell weight — this is about giving Claude (and other AI dev tools) useful project context:</p>
+<div class="mockup">
+<div class="mockup-header">Hierarchical context files</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+CLAUDE.md          <span style="color:#8b949e"># Root (~30 lines) — repo overview, key principles</span>
+core/CLAUDE.md     <span style="color:#8b949e"># (~40 lines) — loading chain, performance budget</span>
+modules/CLAUDE.md  <span style="color:#8b949e"># (~50 lines) — module contract, how to create modules</span>
+modules/*/CLAUDE.md<span style="color:#8b949e"># (~15 lines) — per-module: sections, deps, files</span>
+cli/CLAUDE.md      <span style="color:#8b949e"># (~40 lines) — Go structure, build, key packages</span>
+overrides/CLAUDE.md<span style="color:#8b949e"># (~10 lines) — how overrides work</span>
+profiles/CLAUDE.md <span style="color:#8b949e"># (~15 lines) — JSON schema, examples</span>
+
+<span style="color:#8b949e"># .claudeignore — keep binaries and generated files out</span>
+bin/dotfiles-*
+modules/vim/config/.vim/colors/
+setup/macos-defaults.sh
+.superpowers/
+.cache/
+</div>
+</div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Does this capture the full picture? Last section: migration strategy.</p>

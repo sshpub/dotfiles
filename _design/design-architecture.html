@@ -1,0 +1,110 @@
+<h2>Design: Repository Architecture</h2>
+<p class="subtitle">Section 1 of 6 — Overall structure and file organization</p>
+
+<div class="section">
+<h3>Directory Structure</h3>
+<div class="mockup">
+<div class="mockup-header">Repository Layout</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.85rem; line-height: 1.6; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+dotfiles/
+├── CLAUDE.md                      <span style="color:#8b949e"># Root — repo overview, principles (~30 lines)</span>
+├── .claudeignore                  <span style="color:#8b949e"># Exclude binaries, vim themes, large files</span>
+├── .gitignore
+├── README.md
+│
+├── <span style="color:#79c0ff">core/</span>                            <span style="color:#8b949e"># Always loaded — the thin foundation</span>
+│   ├── CLAUDE.md                  <span style="color:#8b949e"># How the core loading chain works</span>
+│   ├── platform.sh                <span style="color:#8b949e"># Platform detection (from current .platform)</span>
+│   ├── loader.sh                  <span style="color:#8b949e"># Module discovery + section guard system</span>
+│   ├── path.sh                    <span style="color:#8b949e"># Base PATH management</span>
+│   ├── exports.sh                 <span style="color:#8b949e"># Base environment variables</span>
+│   ├── prompt.sh                  <span style="color:#8b949e"># Prompt configuration</span>
+│   ├── aliases.sh                 <span style="color:#8b949e"># Essential aliases (.., ll, mkd, reload)</span>
+│   ├── functions.sh               <span style="color:#8b949e"># Essential functions (extract, mkd, server)</span>
+│   ├── completions.sh             <span style="color:#8b949e"># Base completion setup</span>
+│   └── sync-check.sh              <span style="color:#8b949e"># Daily git sync check + shell notification</span>
+│
+├── <span style="color:#79c0ff">modules/</span>                         <span style="color:#8b949e"># Self-describing feature modules</span>
+│   ├── CLAUDE.md                  <span style="color:#8b949e"># Module system conventions</span>
+│   ├── git/
+│   │   ├── module.json
+│   │   ├── CLAUDE.md
+│   │   ├── aliases.sh
+│   │   ├── functions.sh
+│   │   └── config/                <span style="color:#8b949e"># .gitconfig, .gitignore, .gitattributes</span>
+│   ├── kubernetes/
+│   │   ├── module.json
+│   │   ├── CLAUDE.md
+│   │   ├── aliases.sh
+│   │   └── functions.sh
+│   ├── cloud/
+│   ├── containers/
+│   ├── python/
+│   ├── node/
+│   ├── rust/
+│   ├── vim/
+│   │   ├── module.json
+│   │   └── config/                <span style="color:#8b949e"># .vimrc, .gvimrc, .vim/</span>
+│   ├── tmux/
+│   ├── fzf/
+│   ├── modern-tools/              <span style="color:#8b949e"># eza, bat, ripgrep, fd, zoxide</span>
+│   └── ...
+│
+├── <span style="color:#79c0ff">overrides/</span>                       <span style="color:#8b949e"># Repo-level overrides (tracked in git)</span>
+│   ├── CLAUDE.md
+│   └── kubernetes.sh              <span style="color:#8b949e"># Your prefs, shared across machines</span>
+│
+├── <span style="color:#79c0ff">profiles/</span>                        <span style="color:#8b949e"># Example profiles + profile schema</span>
+│   ├── CLAUDE.md
+│   ├── schema.json                <span style="color:#8b949e"># JSON schema for ~/.dotfiles.json</span>
+│   └── examples/
+│       ├── work-macos.json
+│       ├── personal-linux.json
+│       └── personal-wsl.json
+│
+├── <span style="color:#79c0ff">platform/</span>                        <span style="color:#8b949e"># Platform-specific core overrides</span>
+│   ├── macos.sh                   <span style="color:#8b949e"># macOS-specific core config</span>
+│   ├── linux.sh                   <span style="color:#8b949e"># Linux-specific core config</span>
+│   └── wsl.sh                     <span style="color:#8b949e"># WSL-specific core config</span>
+│
+├── <span style="color:#79c0ff">setup/</span>                           <span style="color:#8b949e"># Installation scripts</span>
+│   ├── bootstrap.sh               <span style="color:#8b949e"># Initial setup + symlinks</span>
+│   ├── macos-defaults.sh          <span style="color:#8b949e"># macOS system preferences (.macos)</span>
+│   └── fonts.sh                   <span style="color:#8b949e"># Font installation</span>
+│
+├── <span style="color:#79c0ff">cli/</span>                             <span style="color:#8b949e"># Go CLI source</span>
+│   ├── CLAUDE.md                  <span style="color:#8b949e"># CLI architecture, build instructions</span>
+│   ├── main.go
+│   ├── cmd/
+│   ├── pkg/
+│   ├── go.mod
+│   └── Makefile
+│
+├── <span style="color:#79c0ff">bin/</span>                             <span style="color:#8b949e"># Pre-built CLI binaries</span>
+│   ├── dotfiles-darwin-arm64
+│   ├── dotfiles-darwin-amd64
+│   ├── dotfiles-linux-arm64
+│   ├── dotfiles-linux-amd64
+│   └── dotfiles                   <span style="color:#8b949e"># Shell wrapper (detects arch, runs right binary)</span>
+│
+└── <span style="color:#79c0ff">docs/</span>
+    ├── TROUBLESHOOTING.md
+    └── MODULE-SPEC.md             <span style="color:#8b949e"># Module contract for marketplace authors</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Key Design Decisions</h3>
+<ul style="line-height: 1.8; color: #c9d1d9;">
+  <li><strong>Flat root</strong> — entry points (<code>.bash_profile</code>, <code>.bashrc</code>) stay in root for symlinking</li>
+  <li><strong>core/</strong> is ~200 lines total — just enough to bootstrap the module system</li>
+  <li><strong>modules/</strong> are fully self-contained — add or remove a directory, nothing else changes</li>
+  <li><strong>platform/</strong> is separate from modules — core platform differences (clipboard, open command) don't belong in a "module"</li>
+  <li><strong>bin/</strong> ships pre-built — zero build dependencies on target machines</li>
+  <li><strong>overrides/</strong> is tracked — your preferences travel with the repo</li>
+  <li><strong>Local overrides</strong> live at <code>~/.dotfiles/local/</code> — untracked, per-machine</li>
+</ul>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Does this structure look right? We'll cover the loading system next.</p>

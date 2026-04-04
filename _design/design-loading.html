@@ -1,0 +1,131 @@
+<h2>Design: Loading System</h2>
+<p class="subtitle">Section 2 of 6 — How shell config gets loaded at startup</p>
+
+<div class="section">
+<h3>Loading Chain</h3>
+<div class="mockup">
+<div class="mockup-header">Shell Startup Sequence</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#f0883e">~/.bash_profile</span>  (symlink → dotfiles/.bash_profile)
+│
+├─ <span style="color:#79c0ff">1. CORE BOOTSTRAP</span>
+│  ├─ core/platform.sh          <span style="color:#8b949e"># Detect OS, arch, distro, pkg manager</span>
+│  ├─ core/loader.sh            <span style="color:#8b949e"># Define dotfiles_section(), load_module()</span>
+│  ├─ core/path.sh              <span style="color:#8b949e"># Base PATH (~/.local/bin, ~/bin)</span>
+│  ├─ core/exports.sh           <span style="color:#8b949e"># EDITOR, LANG, HISTSIZE, etc.</span>
+│  ├─ core/aliases.sh           <span style="color:#8b949e"># .., ll, la, mkd, reload</span>
+│  ├─ core/functions.sh         <span style="color:#8b949e"># extract, server, mkd, backup</span>
+│  └─ core/completions.sh       <span style="color:#8b949e"># Base bash completion setup</span>
+│
+├─ <span style="color:#79c0ff">2. PLATFORM LAYER</span>
+│  └─ platform/{detected}.sh    <span style="color:#8b949e"># macos.sh, linux.sh, or wsl.sh</span>
+│     <span style="color:#8b949e"># Clipboard (pbcopy/pbpaste), open command,</span>
+│     <span style="color:#8b949e"># Homebrew setup, WSL interop, etc.</span>
+│
+├─ <span style="color:#79c0ff">3. LOAD PROFILE</span>
+│  └─ Read ~/.dotfiles.json     <span style="color:#8b949e"># Which modules are enabled + disabled sections</span>
+│     <span style="color:#8b949e"># Build DOTFILES_DISABLED_SECTIONS array</span>
+│     <span style="color:#8b949e"># Build DOTFILES_ENABLED_MODULES list</span>
+│
+├─ <span style="color:#79c0ff">4. MODULE LOADING</span>  <span style="color:#8b949e">(for each enabled module)</span>
+│  │
+│  │  <span style="color:#f0883e">modules/{name}/</span>
+│  │  ├─ <span style="color:#3fb950">a.</span> Read module.json         <span style="color:#8b949e"># Check platform compatibility</span>
+│  │  ├─ <span style="color:#3fb950">b.</span> Source aliases.sh         <span style="color:#8b949e"># With dotfiles_section() guards</span>
+│  │  ├─ <span style="color:#3fb950">c.</span> Source functions.sh       <span style="color:#8b949e"># With dotfiles_section() guards</span>
+│  │  ├─ <span style="color:#3fb950">d.</span> Source completions.sh     <span style="color:#8b949e"># If present</span>
+│  │  └─ <span style="color:#3fb950">e.</span> Add to PATH               <span style="color:#8b949e"># If module defines paths</span>
+│  │
+│  └─ <span style="color:#8b949e">Repeat for each enabled module</span>
+│
+├─ <span style="color:#79c0ff">5. OVERRIDES</span>
+│  ├─ overrides/*.sh            <span style="color:#8b949e"># Repo-level (tracked, all machines)</span>
+│  └─ ~/.dotfiles/local/*.sh    <span style="color:#8b949e"># Local-level (untracked, this machine)</span>
+│
+├─ <span style="color:#79c0ff">6. PRIVATE CONFIG</span>
+│  ├─ ~/.extra                  <span style="color:#8b949e"># Secrets, API keys, work credentials</span>
+│  └─ ~/.local                  <span style="color:#8b949e"># Additional local config</span>
+│
+├─ <span style="color:#79c0ff">7. PROMPT</span>
+│  └─ core/prompt.sh            <span style="color:#8b949e"># Oh My Posh / Starship / fallback prompt</span>
+│
+└─ <span style="color:#79c0ff">8. SYNC CHECK</span>
+   └─ core/sync-check.sh        <span style="color:#8b949e"># Read cached state, show notification if behind</span>
+      <span style="color:#8b949e"># "dotfiles: 3 commits behind (run 'dotfiles update')"</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>The Section Guard System</h3>
+<div class="mockup">
+<div class="mockup-header">How dotfiles_section() works</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+<span style="color:#8b949e"># Defined in core/loader.sh</span>
+<span style="color:#8b949e"># DOTFILES_DISABLED_SECTIONS is populated from ~/.dotfiles.json</span>
+
+<span style="color:#ff7b72">dotfiles_section()</span> {
+  local section="$1"
+  <span style="color:#8b949e"># Check if section is in the disabled list</span>
+  [[ ! " ${DOTFILES_DISABLED_SECTIONS[*]} " =~ " ${section} " ]]
+}
+
+<span style="color:#8b949e"># Usage in a module:</span>
+dotfiles_section "<span style="color:#a5d6ff">git.shortcuts</span>" && {
+  alias g='git'
+  alias gs='git status'
+  alias ga='git add'
+}
+
+dotfiles_section "<span style="color:#a5d6ff">git.log</span>" && {
+  alias glog='git log --oneline --graph'
+  alias glast='git log -1 HEAD'
+}
+
+<span style="color:#8b949e"># If "git.shortcuts" is in DOTFILES_DISABLED_SECTIONS,</span>
+<span style="color:#8b949e"># the entire block is skipped — never parsed, never executed.</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Profile-Driven Loading</h3>
+<div class="mockup">
+<div class="mockup-header">~/.dotfiles.json drives what loads</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre; color: #c9d1d9; padding: 1.5rem;">
+{
+  "role": ["personal", "work"],
+  "modules": {
+    "git":        <span style="color:#3fb950">true</span>,                   <span style="color:#8b949e">// shorthand: shell + install</span>
+    "kubernetes": {
+      "shell": <span style="color:#3fb950">true</span>,
+      "install": <span style="color:#3fb950">true</span>,
+      "disable": ["kubernetes.helm"]  <span style="color:#8b949e">// skip helm section</span>
+    },
+    "cloud":      { "shell": <span style="color:#3fb950">true</span>, "install": <span style="color:#ff7b72">false</span> },
+    "vim":        <span style="color:#3fb950">true</span>,
+    "containers": <span style="color:#3fb950">true</span>,
+    "python":     <span style="color:#3fb950">true</span>,
+    "node":       <span style="color:#3fb950">true</span>
+  }
+}
+
+<span style="color:#8b949e">// Loader reads this at step 3, builds:</span>
+<span style="color:#8b949e">// DOTFILES_ENABLED_MODULES=(git kubernetes cloud vim containers python node)</span>
+<span style="color:#8b949e">// DOTFILES_DISABLED_SECTIONS=(kubernetes.helm)</span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>Performance Budget</h3>
+<ul style="line-height: 1.8; color: #c9d1d9;">
+  <li><strong>Target:</strong> Shell startup under 200ms (current lazy-loading approach preserved)</li>
+  <li><strong>Profile parsing:</strong> CLI pre-generates a shell-sourceable cache from JSON (~1ms to source vs parsing JSON in bash)</li>
+  <li><strong>Module discovery:</strong> Cached — CLI builds a module manifest on <code>dotfiles update</code>, not on every shell open</li>
+  <li><strong>Section guards:</strong> Array lookup — negligible overhead per check</li>
+  <li><strong>Sync check:</strong> Reads a cache file only — no network on shell startup</li>
+</ul>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Does this loading model look right? Next up: the module contract (module.json spec).</p>

@@ -1,0 +1,79 @@
+<h2>Three Approaches to the Dotfiles Overhaul</h2>
+<p class="subtitle">Each approach addresses the same goals — they differ in how much changes at once and where complexity lives</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Modular Monorepo — Recommended</h3>
+      <p><strong>Core:</strong> Thin shell foundation (platform detection, PATH, prompt, exports, sync-check)</p>
+      <p><strong>Modules:</strong> Self-describing directories with <code>module.json</code> — aliases, functions, install recipes. CLI discovers and loads them.</p>
+      <p><strong>CLI:</strong> Expand Go CLI as the primary tool. Pre-built binaries per platform/arch behind a thin shell wrapper. Handles bootstrap, module management, sync, profile wizard.</p>
+      <p><strong>Profiles:</strong> Per-machine <code>~/.dotfiles.json</code> selects role + modules. Generated interactively on first run.</p>
+      <p><strong>Claude:</strong> Hierarchical CLAUDE.md per directory + <code>.claudeignore</code> for large files.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Clean separation — modules are self-contained and shareable</li>
+          <li>Incremental migration — move things into modules one at a time</li>
+          <li>Module marketplace-ready from day one</li>
+          <li>Claude gets scoped context naturally</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>More files/dirs than today (but each is smaller and focused)</li>
+          <li>Shell startup adds a module discovery loop</li>
+          <li>Go CLI is the critical path — needs to be solid</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Layered Config (Cascade Model)</h3>
+      <p><strong>Structure:</strong> <code>base/</code> → <code>platform/{macos,linux,wsl}/</code> → <code>role/{work,personal}/</code> → <code>machine/{hostname}/</code></p>
+      <p><strong>Loading:</strong> Each layer overrides/extends the previous. Shell sources them in order.</p>
+      <p><strong>CLI:</strong> Same Go CLI approach, but the CLI's job is simpler — just source the right layers in order.</p>
+      <p><strong>Modules:</strong> No formal module system. Features are organized by layer instead.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Very predictable — "which layer set this?" has a clear answer</li>
+          <li>Natural for platform/role differences</li>
+          <li>Simpler mental model for override behavior</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Features get split across layers (k8s aliases in base, platform, AND role)</li>
+          <li>No marketplace path — features aren't self-contained units</li>
+          <li>Adding a new tool means touching multiple layers</li>
+          <li>Harder for Claude — context scattered across layers</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid — Modules + Light Layering</h3>
+      <p><strong>Same as A</strong> but modules themselves can have platform/role overrides internally:</p>
+      <p><code>modules/kubernetes/aliases.sh</code> (base)<br>
+         <code>modules/kubernetes/aliases.macos.sh</code> (platform overlay)<br>
+         <code>modules/kubernetes/aliases.work.sh</code> (role overlay)</p>
+      <p><strong>Benefit:</strong> Platform/role differences are colocated with the module, not in a separate layer tree.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>All of A's benefits</li>
+          <li>Platform/role specifics stay with the module</li>
+          <li>Very clean for marketplace — module ships with all its variants</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>More convention to learn (filename-based overlays)</li>
+          <li>Module loader is more complex</li>
+          <li>Overkill if most modules don't vary by platform</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem; text-align: center;">Click to select your preferred approach. We can also combine elements.</p>
