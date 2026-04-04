@@ -1,0 +1,21 @@
+{
+  "name": "containers",
+  "version": "1.0.0",
+  "description": "Docker and Podman aliases and functions",
+  "sections": {
+    "containers.docker": "Docker command shortcuts",
+    "containers.compose": "Docker Compose helpers"
+  },
+  "shell": {
+    "load_order": ["exports.sh", "aliases.sh", "functions.sh"]
+  },
+  "install": {
+    "macos": {
+      "brew": ["docker", "docker-compose", "podman"]
+    },
+    "linux": {
+      "apt": ["docker.io", "docker-compose"]
+    },
+    "wsl": { "inherit": "linux" }
+  }
+}
