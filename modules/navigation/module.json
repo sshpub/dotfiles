@@ -1,0 +1,12 @@
+{
+  "name": "navigation",
+  "version": "1.0.0",
+  "description": "Directory navigation shortcuts and bookmarks",
+  "sections": {
+    "navigation.dirs": "Common directory shortcuts",
+    "navigation.bookmarks": "Directory bookmarking"
+  },
+  "shell": {
+    "load_order": ["aliases.sh"]
+  }
+}

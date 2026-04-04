@@ -1,0 +1,12 @@
+{
+  "name": "safety",
+  "version": "1.0.0",
+  "description": "Safe defaults and disk usage helpers",
+  "sections": {
+    "safety.interactive": "Interactive mode for destructive commands",
+    "safety.disk": "Disk usage and cleanup helpers"
+  },
+  "shell": {
+    "load_order": ["aliases.sh"]
+  }
+}

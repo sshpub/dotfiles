@@ -1,0 +1,17 @@
+{
+  "name": "node",
+  "version": "1.0.0",
+  "description": "Node.js and npm aliases",
+  "sections": {
+    "node.npm": "npm command shortcuts",
+    "node.scripts": "Common script runners"
+  },
+  "shell": {
+    "load_order": ["exports.sh", "aliases.sh"]
+  },
+  "install": {
+    "macos": { "brew": ["node"] },
+    "linux": { "apt": ["nodejs", "npm"] },
+    "wsl": { "inherit": "linux" }
+  }
+}

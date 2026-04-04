@@ -1,0 +1,16 @@
+{
+  "name": "tmux",
+  "version": "1.0.0",
+  "description": "Tmux terminal multiplexer configuration",
+  "sections": {
+    "tmux.config": "Tmux configuration symlinks"
+  },
+  "install": {
+    "macos": { "brew": ["tmux"] },
+    "linux": { "apt": ["tmux"] },
+    "wsl": { "inherit": "linux" }
+  },
+  "symlinks": {
+    "config/.tmux.conf": "~/.tmux.conf"
+  }
+}

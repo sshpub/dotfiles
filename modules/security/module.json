@@ -1,0 +1,12 @@
+{
+  "name": "security",
+  "version": "1.0.0",
+  "description": "SSH and GPG key management functions",
+  "sections": {
+    "security.ssh": "SSH key generation, management, and permission checking",
+    "security.gpg": "GPG key generation and git signing setup"
+  },
+  "shell": {
+    "load_order": ["functions.sh"]
+  }
+}

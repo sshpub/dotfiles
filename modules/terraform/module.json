@@ -1,0 +1,16 @@
+{
+  "name": "terraform",
+  "version": "1.0.0",
+  "description": "Terraform/OpenTofu aliases",
+  "sections": {
+    "terraform.core": "Terraform command shortcuts"
+  },
+  "shell": {
+    "load_order": ["aliases.sh"]
+  },
+  "install": {
+    "macos": { "brew": ["terraform"] },
+    "linux": { "apt": ["terraform"] },
+    "wsl": { "inherit": "linux" }
+  }
+}

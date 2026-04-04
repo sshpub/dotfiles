@@ -1,0 +1,12 @@
+{
+  "name": "system",
+  "version": "1.0.0",
+  "description": "System information and process management",
+  "sections": {
+    "system.info": "System information display",
+    "system.processes": "Process management helpers"
+  },
+  "shell": {
+    "load_order": ["aliases.sh", "functions.sh"]
+  }
+}

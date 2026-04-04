@@ -1,0 +1,16 @@
+{
+  "name": "vim",
+  "version": "1.0.0",
+  "description": "Vim/Neovim configuration",
+  "sections": {
+    "vim.config": "Vim configuration symlinks"
+  },
+  "install": {
+    "macos": { "brew": ["neovim"] },
+    "linux": { "apt": ["neovim"] },
+    "wsl": { "inherit": "linux" }
+  },
+  "symlinks": {
+    "config/.vimrc": "~/.vimrc"
+  }
+}
