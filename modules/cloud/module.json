@@ -1,0 +1,23 @@
+{
+  "name": "cloud",
+  "version": "1.0.0",
+  "description": "Cloud CLI aliases and helper functions (AWS, GCP, Azure)",
+  "sections": {
+    "cloud.aws": "AWS CLI aliases and helpers",
+    "cloud.gcp": "GCP/gcloud aliases and helpers",
+    "cloud.azure": "Azure CLI aliases and helpers"
+  },
+  "shell": {
+    "load_order": ["aliases.sh", "functions.sh"]
+  },
+  "install": {
+    "macos": {
+      "brew": ["awscli", "google-cloud-sdk", "azure-cli"]
+    },
+    "linux": {
+      "apt": ["awscli"],
+      "snap": ["google-cloud-cli --classic"]
+    },
+    "wsl": { "inherit": "linux" }
+  }
+}
