@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Desktop.ini
+._*
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Generated / caches
+.cache/
+
+# Local overrides (per-machine, untracked)
+# These live at ~/.dotfiles/local/ but just in case
+local/
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Superpowers / AI tooling
+.superpowers/
+
+# Python
+*.pyc
+__pycache__/
+
+# Compiled
+*.o
+*.so
