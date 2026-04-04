@@ -1,0 +1,25 @@
+{
+  "name": "modern-tools",
+  "version": "1.0.0",
+  "description": "Aliases for eza, bat, ripgrep, fd, zoxide",
+  "sections": {
+    "modern-tools.listing": "eza/exa ls replacements",
+    "modern-tools.cat": "bat as cat replacement",
+    "modern-tools.search": "ripgrep and fd aliases",
+    "modern-tools.cd": "zoxide smart cd"
+  },
+  "shell": {
+    "load_order": ["aliases.sh"]
+  },
+  "install": {
+    "macos": {
+      "brew": ["eza", "bat", "ripgrep", "fd", "zoxide"]
+    },
+    "linux": {
+      "apt": ["bat", "ripgrep", "fd-find", "zoxide"],
+      "dnf": ["bat", "ripgrep", "fd-find", "zoxide"],
+      "pacman": ["eza", "bat", "ripgrep", "fd", "zoxide"]
+    },
+    "wsl": { "inherit": "linux" }
+  }
+}
