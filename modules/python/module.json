@@ -1,0 +1,17 @@
+{
+  "name": "python",
+  "version": "1.0.0",
+  "description": "Python development aliases and environment setup",
+  "sections": {
+    "python.core": "Python command aliases",
+    "python.venv": "Virtual environment helpers"
+  },
+  "shell": {
+    "load_order": ["exports.sh", "aliases.sh"]
+  },
+  "install": {
+    "macos": { "brew": ["python@3"] },
+    "linux": { "apt": ["python3", "python3-pip", "python3-venv"] },
+    "wsl": { "inherit": "linux" }
+  }
+}

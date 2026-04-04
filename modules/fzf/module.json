@@ -1,0 +1,17 @@
+{
+  "name": "fzf",
+  "version": "1.0.0",
+  "description": "Fuzzy finder configuration and keybindings",
+  "sections": {
+    "fzf.core": "FZF default options and commands",
+    "fzf.keybindings": "Shell keybindings (Ctrl-T, Ctrl-R, Alt-C)"
+  },
+  "shell": {
+    "load_order": ["exports.sh"]
+  },
+  "install": {
+    "macos": { "brew": ["fzf"] },
+    "linux": { "apt": ["fzf"] },
+    "wsl": { "inherit": "linux" }
+  }
+}

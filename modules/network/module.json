@@ -1,0 +1,12 @@
+{
+  "name": "network",
+  "version": "1.0.0",
+  "description": "Network diagnostic aliases and functions",
+  "sections": {
+    "network.ip": "IP address and connectivity checks",
+    "network.http": "HTTP traffic and certificate inspection"
+  },
+  "shell": {
+    "load_order": ["aliases.sh", "functions.sh"]
+  }
+}

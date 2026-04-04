@@ -1,0 +1,11 @@
+{
+  "name": "rust",
+  "version": "1.0.0",
+  "description": "Rust and Cargo aliases",
+  "sections": {
+    "rust.cargo": "Cargo command shortcuts"
+  },
+  "shell": {
+    "load_order": ["path.sh", "aliases.sh"]
+  }
+}
