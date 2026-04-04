@@ -1,0 +1,24 @@
+{
+  "name": "git",
+  "version": "1.0.0",
+  "description": "Git aliases, functions, and configuration",
+  "author": "Anton Swartz",
+  "sections": {
+    "git.shortcuts": "Common git command shortcuts (g, gs, ga, gc, gp, etc.)",
+    "git.log": "Visual log and history aliases",
+    "git.branch": "Branch management aliases"
+  },
+  "shell": {
+    "load_order": ["aliases.sh", "functions.sh"]
+  },
+  "install": {
+    "macos": { "brew": ["git", "git-lfs"] },
+    "linux": { "apt": ["git", "git-lfs"] },
+    "wsl": { "inherit": "linux" }
+  },
+  "symlinks": {
+    "config/.gitconfig": "~/.gitconfig",
+    "config/.gitignore": "~/.gitignore",
+    "config/.gitattributes": "~/.gitattributes"
+  }
+}
