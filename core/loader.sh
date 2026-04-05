@@ -131,7 +131,7 @@ load_module() {
 dotfiles_load_modules() {
   local mod
   for mod in "${DOTFILES_ENABLED_MODULES[@]}"; do
-    load_module "$mod"
+    dotfiles_should_load "$mod" && load_module "$mod"
   done
 }
 

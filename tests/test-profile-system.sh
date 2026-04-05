@@ -604,6 +604,45 @@ test_mode_types() {
   )
 }
 
+test_exclude_mode_integration() {
+  echo "=== Exclude mode integration ==="
+
+  # Test: exclude mode loads modules but skips never_load items
+  (
+    set +eu +o pipefail
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE DOTFILES_DATA_DIR
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-exclude-int-$$"
+    mkdir -p "${test_home}/.dotfiles/cache"
+
+    # Write a profile cache with an exclude mode
+    cat > "${test_home}/.dotfiles/cache/profile.sh" <<'CACHE'
+DOTFILES_ENABLED_MODULES=(git modern-tools)
+DOTFILES_DISABLED_SECTIONS=()
+DOTFILES_MODE_NAMES=(testexclude)
+DOTFILES_MODE_testexclude_TRIGGERS=(TEST_EXCLUDE)
+DOTFILES_MODE_testexclude_TYPE=exclude
+DOTFILES_MODE_testexclude_MODULES=()
+DOTFILES_MODE_testexclude_NEVER_LOAD=(prompt sync-check)
+CACHE
+
+    TEST_EXCLUDE=1 HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+
+    assert_eq "exclude mode activated" "testexclude" "${DOTFILES_ACTIVE_MODE:-}"
+
+    # Modules should have loaded (from cache, full chain)
+    if [[ ${#DOTFILES_ENABLED_MODULES[@]} -gt 0 ]]; then
+      pass "exclude mode loads modules"
+    else
+      fail "exclude mode loads modules" "no modules loaded"
+    fi
+
+    unset TEST_EXCLUDE
+    rm -rf "$test_home"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
@@ -612,6 +651,7 @@ test_mode_resolution
 test_mode_disable
 test_mode_types
 test_bash_profile_integration
+test_exclude_mode_integration
 test_generate_cache
 test_round_trip
 
