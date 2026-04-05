@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sshpub/dotfiles/profiles/schema.json",
+  "_comment": "JSON Schema for ~/.dotfiles.json — validates machine profile configuration",
+  "title": "Dotfiles Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_comment": {
+      "type": "string",
+      "description": "Documentation field (JSON has no comments)"
+    },
+    "role": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Machine roles (e.g., personal, work)"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_comment": { "type": "string" },
+        "os": {
+          "type": "string",
+          "enum": ["macos", "linux"],
+          "description": "Operating system (auto-detected if omitted)"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["wsl"],
+          "description": "Platform variant (e.g., wsl)"
+        },
+        "distro": {
+          "type": "string",
+          "description": "Linux distribution ID (e.g., ubuntu, fedora)"
+        }
+      },
+      "description": "Platform overrides — auto-detected if omitted"
+    },
+    "modules": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "oneOf": [
+            {
+              "type": "boolean",
+              "const": true,
+              "description": "Shorthand for { shell: true, install: true }"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "_comment": { "type": "string" },
+                "shell": {
+                  "type": "boolean",
+                  "description": "Source this module's shell files"
+                },
+                "install": {
+                  "type": "boolean",
+                  "description": "Run this module's install recipes"
+                },
+                "disable": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$"
+                  },
+                  "uniqueItems": true,
+                  "description": "Sections to disable (module.section format)"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "Module configuration — omit for all modules enabled"
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_comment": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Git user name for this machine"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Git user email for this machine"
+        }
+      },
+      "description": "Machine-level git identity"
+    },
+    "modes": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "_comment": { "type": "string" },
+            "env_triggers": {
+              "type": "array",
+              "items": { "type": "string" },
+              "uniqueItems": true,
+              "description": "Environment variable names that activate this mode"
+            },
+            "include_modules": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true,
+              "description": "Modules to load when this mode is active"
+            },
+            "never_load": {
+              "type": "array",
+              "items": { "type": "string" },
+              "uniqueItems": true,
+              "description": "Core components or modules to skip (forward compat — not enforced yet)"
+            }
+          },
+          "description": "Mode configuration"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Named modes — first triggered wins. Omit for hardcoded minimal defaults."
+    },
+    "registries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "_comment": { "type": "string" },
+          "name": {
+            "type": "string",
+            "description": "Registry identifier"
+          },
+          "url": {
+            "type": "string",
+            "description": "Registry URL (HTTPS or git SSH)"
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether this registry requires authentication"
+          }
+        }
+      },
+      "description": "Module registries (Phase 5 — defined in schema, not processed yet)"
+    }
+  }
+}
