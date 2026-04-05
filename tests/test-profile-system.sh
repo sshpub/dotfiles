@@ -125,7 +125,100 @@ test_default_profile() {
 
 test_mode_resolution() {
   echo "=== Mode resolution ==="
-  echo "(placeholder — Task 4 adds tests here)"
+
+  # Test: env var override forces mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-mode-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE="custom"
+    dotfiles_resolve_mode
+    assert_eq "env var forces mode" "custom" "$DOTFILES_ACTIVE_MODE"
+    unset DOTFILES_MODE
+
+    rm -rf "$test_home"
+  )
+
+  # Test: trigger detection activates mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-trigger-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    assert_eq "CLAUDE_CODE triggers minimal" "minimal" "$DOTFILES_ACTIVE_MODE"
+    unset CLAUDE_CODE
+
+    rm -rf "$test_home"
+  )
+
+  # Test: no triggers = no active mode
+  (
+    unset DOTFILES_DATA_DIR DOTFILES_MODE
+    unset CLAUDE_CODE CODEX GEMINI_CLI OPENCODE GROK_CLI CI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-nomode-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    if dotfiles_resolve_mode; then
+      fail "no mode when no triggers" "should have returned 1"
+    else
+      pass "no mode when no triggers"
+    fi
+    assert_eq "active mode is empty" "" "$DOTFILES_ACTIVE_MODE"
+
+    rm -rf "$test_home"
+  )
+
+  # Test: first triggered mode wins (order matters)
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-order-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    # Add a second mode
+    DOTFILES_MODE_NAMES=(server minimal)
+    DOTFILES_MODE_server_TRIGGERS=(SSH_SESSION)
+    DOTFILES_MODE_server_MODULES=(git safety)
+    DOTFILES_MODE_server_NEVER_LOAD=(prompt)
+
+    # Trigger both
+    SSH_SESSION=1
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    assert_eq "first mode wins" "server" "$DOTFILES_ACTIVE_MODE"
+    unset SSH_SESSION CLAUDE_CODE
+
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_is_minimal backward compat
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-ismin-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    if dotfiles_is_minimal; then
+      pass "dotfiles_is_minimal returns true when minimal active"
+    else
+      fail "dotfiles_is_minimal returns true when minimal active" "returned false"
+    fi
+    unset CLAUDE_CODE
+
+    rm -rf "$test_home"
+  )
 }
 
 test_bash_profile_integration() {
