@@ -35,9 +35,9 @@ _dotfiles_source() { [[ -f "$1" ]] && . "$1"; }
 . "${DOTFILES_DIR}/core/path.sh"
 . "${DOTFILES_DIR}/core/exports.sh"
 
-# ─── 2. Minimal Mode Check ────────────────────────────────────────────
-if dotfiles_is_minimal; then
-    dotfiles_load_minimal_extras
+# ─── 2. Mode Check ───────────────────────────────────────────────────
+if dotfiles_resolve_mode; then
+    dotfiles_load_mode_extras
     return 0 2>/dev/null || exit 0
 fi
 
@@ -55,7 +55,7 @@ elif is_linux; then
     _dotfiles_source "${DOTFILES_DIR}/platform/linux.sh"
 fi
 
-# ─── 5–6. Module Loading ─────────────────────────────────────────────
+# ─── 5–6. Profile + Module Loading ───────────────────────────────────
 dotfiles_load_modules
 
 # ─── 7. Overrides ────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ for _f in "${DOTFILES_DIR}"/overrides/*.sh; do
     _dotfiles_source "$_f"
 done
 # Local-level (untracked, per-machine)
-for _f in "${HOME}"/.dotfiles/local/*.sh; do
+for _f in "${DOTFILES_DATA_DIR}"/local/*.sh; do
     _dotfiles_source "$_f"
 done
 unset _f
