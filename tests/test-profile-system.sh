@@ -95,7 +95,32 @@ test_data_dir_resolution() {
 
 test_default_profile() {
   echo "=== Default profile (no cache, no profile) ==="
-  echo "(placeholder — Task 3 adds tests here)"
+
+  # Test: discovers all bundled modules when no cache exists
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-default-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    # Should find all modules that have module.json
+    local expected_count
+    expected_count=$(find "${DOTFILES_DIR}/modules" -name module.json -maxdepth 2 | wc -l)
+    assert_eq "discovers all modules" "$expected_count" "${#DOTFILES_ENABLED_MODULES[@]}"
+
+    # git should be in the list
+    assert_contains "git in enabled modules" "git" "${DOTFILES_ENABLED_MODULES[*]}"
+
+    # No disabled sections by default
+    assert_eq "no disabled sections" "0" "${#DOTFILES_DISABLED_SECTIONS[@]}"
+
+    # Default minimal mode exists
+    assert_contains "minimal in mode names" "minimal" "${DOTFILES_MODE_NAMES[*]}"
+    assert_contains "CLAUDE_CODE in minimal triggers" "CLAUDE_CODE" "${DOTFILES_MODE_minimal_TRIGGERS[*]}"
+
+    rm -rf "$test_home"
+  )
 }
 
 test_mode_resolution() {
