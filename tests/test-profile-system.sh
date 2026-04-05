@@ -223,7 +223,38 @@ test_mode_resolution() {
 
 test_bash_profile_integration() {
   echo "=== .bash_profile integration ==="
-  echo "(placeholder — Task 6 adds tests here)"
+
+  # Test: full interactive load (no mode triggers)
+  (
+    set +eu +o pipefail  # .bash_profile sources may have non-zero returns / unset vars
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE DOTFILES_DATA_DIR
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-bp-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+    # Should have loaded modules (all-modules default)
+    if [[ ${#DOTFILES_ENABLED_MODULES[@]} -gt 0 ]]; then
+      pass "full load enables modules"
+    else
+      fail "full load enables modules" "no modules enabled"
+    fi
+    assert_eq "no active mode" "" "${DOTFILES_ACTIVE_MODE:-}"
+    rm -rf "$test_home"
+  )
+
+  # Test: mode triggers cause early return
+  (
+    set +eu +o pipefail
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-bp-mode-$$"
+    mkdir -p "$test_home"
+    CLAUDE_CODE=1 HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+    assert_eq "minimal mode activated" "minimal" "${DOTFILES_ACTIVE_MODE:-}"
+    unset CLAUDE_CODE
+    rm -rf "$test_home"
+  )
 }
 
 test_generate_cache() {
