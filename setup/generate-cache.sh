@@ -166,6 +166,10 @@ mkdir -p "$CACHE_DIR"
   while IFS= read -r mode; do
     [[ -z "$mode" ]] && continue
 
+    # Type (defaults to include)
+    mode_type="$(echo "$PROFILE" | jq -r ".modes[\"$mode\"].type // \"include\"")"
+    printf "DOTFILES_MODE_%s_TYPE=%s\n" "$mode" "$mode_type"
+
     # Triggers
     triggers="$(echo "$PROFILE" | jq -r ".modes[\"$mode\"].env_triggers // [] | .[]")"
     printf "DOTFILES_MODE_%s_TRIGGERS=(" "$mode"

@@ -643,6 +643,47 @@ CACHE
   )
 }
 
+test_generate_cache_types() {
+  echo "=== Cache generator with mode types ==="
+
+  local test_home="/tmp/dotfiles-test-gen-types-$$"
+  local test_profile="${test_home}/profile.json"
+
+  mkdir -p "${test_home}/.dotfiles"
+
+  cat > "$test_profile" <<'PROFILE'
+{
+  "modules": { "git": true },
+  "modes": {
+    "minimal": {
+      "type": "include",
+      "env_triggers": ["CI"],
+      "include_modules": ["git"],
+      "never_load": []
+    },
+    "server": {
+      "type": "exclude",
+      "env_triggers": ["SSH_SESSION"],
+      "include_modules": [],
+      "never_load": ["prompt", "fzf"]
+    }
+  }
+}
+PROFILE
+
+  (
+    DOTFILES_DATA_DIR="${test_home}/.dotfiles" \
+      bash "${DOTFILES_DIR}/setup/generate-cache.sh" "$test_profile" > /dev/null
+
+    source "${test_home}/.dotfiles/cache/profile.sh"
+
+    assert_eq "minimal type is include" "include" "${DOTFILES_MODE_minimal_TYPE}"
+    assert_eq "server type is exclude" "exclude" "${DOTFILES_MODE_server_TYPE}"
+  )
+
+  rm -rf "$test_home"
+}
+
 # --- Run ---
 
 test_data_dir_resolution
@@ -653,6 +694,7 @@ test_mode_types
 test_bash_profile_integration
 test_exclude_mode_integration
 test_generate_cache
+test_generate_cache_types
 test_round_trip
 
 echo ""
