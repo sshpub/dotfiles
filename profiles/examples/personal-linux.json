@@ -1,0 +1,18 @@
+{
+  "_comment": "Personal Linux desktop",
+  "role": ["personal"],
+  "modules": {
+    "git": true,
+    "modern-tools": true,
+    "rust": true,
+    "python": true,
+    "vim": true,
+    "fzf": true,
+    "safety": true,
+    "navigation": true
+  },
+  "git": {
+    "name": "Your Name",
+    "email": "you@personal.com"
+  }
+}

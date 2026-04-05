@@ -1,0 +1,28 @@
+{
+  "_comment": "Work MacBook — full development setup",
+  "role": ["work"],
+  "modules": {
+    "git": true,
+    "modern-tools": true,
+    "containers": true,
+    "kubernetes": true,
+    "cloud": { "shell": true, "install": true },
+    "terraform": true,
+    "python": true,
+    "node": true,
+    "vim": true,
+    "fzf": true,
+    "tmux": true
+  },
+  "git": {
+    "name": "Your Name",
+    "email": "you@work.com"
+  },
+  "modes": {
+    "minimal": {
+      "env_triggers": ["CLAUDE_CODE", "CODEX", "GEMINI_CLI", "CI"],
+      "include_modules": ["git"],
+      "never_load": ["prompt", "completions", "sync-check"]
+    }
+  }
+}

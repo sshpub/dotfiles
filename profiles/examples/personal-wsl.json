@@ -1,0 +1,34 @@
+{
+  "_comment": "WSL Ubuntu — development environment",
+  "role": ["personal", "work"],
+  "modules": {
+    "git": true,
+    "modern-tools": true,
+    "containers": true,
+    "kubernetes": { "shell": true, "install": true, "disable": ["kubernetes.helm"] },
+    "cloud": { "shell": true, "install": false },
+    "python": true,
+    "node": true,
+    "vim": true,
+    "fzf": true,
+    "tmux": true,
+    "safety": true,
+    "system": true
+  },
+  "git": {
+    "name": "Your Name",
+    "email": "you@personal.com"
+  },
+  "modes": {
+    "minimal": {
+      "env_triggers": ["CLAUDE_CODE", "CODEX", "GEMINI_CLI", "CI", "GITHUB_ACTIONS"],
+      "include_modules": ["git"],
+      "never_load": ["prompt", "completions", "sync-check"]
+    },
+    "server": {
+      "env_triggers": ["SSH_SESSION"],
+      "include_modules": ["git", "safety", "system", "modern-tools"],
+      "never_load": ["prompt", "fzf", "tmux"]
+    }
+  }
+}
