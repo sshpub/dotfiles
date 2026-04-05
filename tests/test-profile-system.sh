@@ -710,6 +710,98 @@ test_performance() {
   )
 }
 
+test_override_system() {
+  echo "=== Override system ==="
+
+  # Test: repo overrides sourced after modules
+  (
+    set +eu +o pipefail
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE DOTFILES_DATA_DIR
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-override-$$"
+    mkdir -p "$test_home"
+
+    # Create a repo override that sets a marker
+    mkdir -p "${DOTFILES_DIR}/overrides"
+    echo 'DOTFILES_TEST_REPO_OVERRIDE=yes' > "${DOTFILES_DIR}/overrides/test-override.sh"
+
+    HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+
+    assert_eq "repo override loaded" "yes" "${DOTFILES_TEST_REPO_OVERRIDE:-}"
+
+    # Cleanup
+    rm -f "${DOTFILES_DIR}/overrides/test-override.sh"
+    unset DOTFILES_TEST_REPO_OVERRIDE
+    rm -rf "$test_home"
+  )
+
+  # Test: local overrides sourced after repo overrides (last write wins)
+  (
+    set +eu +o pipefail
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE DOTFILES_DATA_DIR
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-override-local-$$"
+    mkdir -p "${test_home}/.dotfiles/local"
+
+    # Repo override sets a value
+    mkdir -p "${DOTFILES_DIR}/overrides"
+    echo 'DOTFILES_TEST_OVERRIDE_ORDER=repo' > "${DOTFILES_DIR}/overrides/test-order.sh"
+
+    # Local override overwrites it
+    echo 'DOTFILES_TEST_OVERRIDE_ORDER=local' > "${test_home}/.dotfiles/local/test-order.sh"
+
+    HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+
+    assert_eq "local override wins over repo" "local" "${DOTFILES_TEST_OVERRIDE_ORDER:-}"
+
+    # Cleanup
+    rm -f "${DOTFILES_DIR}/overrides/test-order.sh"
+    unset DOTFILES_TEST_OVERRIDE_ORDER
+    rm -rf "$test_home"
+  )
+
+  # Test: section disable prevents loading
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-section-disable-$$"
+    mkdir -p "${test_home}/.dotfiles/cache"
+
+    # Write a cache with a disabled section
+    cat > "${test_home}/.dotfiles/cache/profile.sh" <<'CACHE'
+DOTFILES_ENABLED_MODULES=(git)
+DOTFILES_DISABLED_SECTIONS=(git.shortcuts)
+DOTFILES_MODE_NAMES=(minimal)
+DOTFILES_MODE_minimal_TYPE=include
+DOTFILES_MODE_minimal_TRIGGERS=(CLAUDE_CODE)
+DOTFILES_MODE_minimal_MODULES=()
+DOTFILES_MODE_minimal_NEVER_LOAD=()
+CACHE
+
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    if dotfiles_section "git.shortcuts"; then
+      fail "disabled section blocked" "git.shortcuts was not blocked"
+    else
+      pass "disabled section blocked"
+    fi
+    if dotfiles_section "git.log"; then
+      pass "non-disabled section allowed"
+    else
+      fail "non-disabled section allowed" "git.log was blocked"
+    fi
+
+    rm -rf "$test_home"
+  )
+
+  # Test: overrides directory exists in repo
+  (
+    assert_file_exists "overrides dir exists" "${DOTFILES_DIR}/overrides/.gitkeep"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
@@ -719,6 +811,7 @@ test_mode_disable
 test_mode_types
 test_bash_profile_integration
 test_exclude_mode_integration
+test_override_system
 test_generate_cache
 test_generate_cache_types
 test_performance
