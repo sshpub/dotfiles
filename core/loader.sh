@@ -52,6 +52,11 @@ dotfiles_section() {
 # --- Mode Resolution ---
 
 dotfiles_resolve_mode() {
+  # Explicit disable
+  if [[ "${DOTFILES_MODE:-}" =~ ^(none|false|off)$ ]]; then
+    DOTFILES_ACTIVE_MODE=""
+    return 1
+  fi
   # Env var override
   if [[ -n "${DOTFILES_MODE:-}" ]]; then
     DOTFILES_ACTIVE_MODE="$DOTFILES_MODE"

@@ -403,11 +403,74 @@ PROFILE
   rm -rf "$test_home"
 }
 
+test_mode_disable() {
+  echo "=== Mode disable (DOTFILES_MODE=none/false/off) ==="
+
+  # Test: DOTFILES_MODE=none disables mode even when trigger is set
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=none
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=none disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=none disables"
+    fi
+    assert_eq "active mode empty with none" "" "$DOTFILES_ACTIVE_MODE"
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+
+  # Test: DOTFILES_MODE=false disables
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-false-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=false
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=false disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=false disables"
+    fi
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+
+  # Test: DOTFILES_MODE=off disables
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-off-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=off
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=off disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=off disables"
+    fi
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
 test_default_profile
 test_mode_resolution
+test_mode_disable
 test_bash_profile_integration
 test_generate_cache
 test_round_trip
