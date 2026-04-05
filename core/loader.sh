@@ -27,6 +27,7 @@ _dotfiles_default_profile() {
 
   # Hardcoded minimal mode defaults
   DOTFILES_MODE_NAMES=(minimal)
+  DOTFILES_MODE_minimal_TYPE=include
   DOTFILES_MODE_minimal_TRIGGERS=(
     CLAUDE_CODE CODEX GEMINI_CLI OPENCODE GROK_CLI
     CI GITHUB_ACTIONS GITLAB_CI
@@ -141,4 +142,10 @@ dotfiles_load_mode_extras() {
   for mod in "${!modules_var}"; do
     load_module "$mod"
   done
+}
+
+# --- Test Helper ---
+
+dotfiles_test_mode() {
+  DOTFILES_MODE="${1:-minimal}" bash -l
 }
