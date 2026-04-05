@@ -4,8 +4,32 @@
 # Fast path: source cached platform variables (~1ms)
 # Fallback:  detect platform, export variables, write cache
 
-DOTFILES_CACHE_DIR="${HOME}/.dotfiles/cache"
+_dotfiles_resolve_data_dir() {
+  # Env var override
+  if [[ -n "${DOTFILES_DATA_DIR:-}" ]]; then
+    return 0
+  fi
+  # Search chain: first existing directory wins
+  local candidate
+  for candidate in \
+    "${HOME}/.dotfiles" \
+    "${HOME}/.config/dotfiles" \
+    "${HOME}/.local/share/dotfiles" \
+  ; do
+    if [[ -d "$candidate" ]]; then
+      DOTFILES_DATA_DIR="$candidate"
+      return 0
+    fi
+  done
+  # Default
+  DOTFILES_DATA_DIR="${HOME}/.dotfiles"
+}
+
+_dotfiles_resolve_data_dir
+DOTFILES_CACHE_DIR="${DOTFILES_DATA_DIR}/cache"
 DOTFILES_PLATFORM_CACHE="${DOTFILES_CACHE_DIR}/platform.sh"
+
+export DOTFILES_DATA_DIR DOTFILES_CACHE_DIR
 
 # --- Detection (runs only when cache is missing) ---
 

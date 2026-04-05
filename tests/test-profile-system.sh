@@ -4,22 +4,28 @@
 
 set -euo pipefail
 
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Results tracked via temp file so subshell results propagate
+RESULTS_FILE="$(mktemp)"
+trap 'rm -f "$RESULTS_FILE"' EXIT
+echo "0 0 0" > "$RESULTS_FILE"
+
+_record() {
+  local run passed failed
+  read -r run passed failed < "$RESULTS_FILE"
+  echo "$1 $2 $3" | awk -v r="$run" -v p="$passed" -v f="$failed" \
+    '{print r+$1, p+$2, f+$3}' > "$RESULTS_FILE"
+}
+
 pass() {
-  ((TESTS_PASSED++))
-  ((TESTS_RUN++))
+  _record 1 1 0
   echo "  PASS: $1"
 }
 
 fail() {
-  ((TESTS_FAILED++))
-  ((TESTS_RUN++))
+  _record 1 0 1
   echo "  FAIL: $1 — $2"
 }
 
@@ -55,7 +61,36 @@ assert_file_exists() {
 
 test_data_dir_resolution() {
   echo "=== Data directory resolution ==="
-  echo "(placeholder — Task 2 adds tests here)"
+
+  # Test: env var override takes priority
+  (
+    export DOTFILES_DATA_DIR="/tmp/dotfiles-test-data-override"
+    mkdir -p "$DOTFILES_DATA_DIR"
+    source "${DOTFILES_DIR}/core/platform.sh"
+    assert_eq "env var override" "/tmp/dotfiles-test-data-override" "$DOTFILES_DATA_DIR"
+    assert_eq "cache dir derives from data dir" "/tmp/dotfiles-test-data-override/cache" "$DOTFILES_CACHE_DIR"
+    rm -rf "$DOTFILES_DATA_DIR"
+  )
+
+  # Test: falls back to ~/.dotfiles/ when it exists
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-home-$$"
+    mkdir -p "${test_home}/.dotfiles"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    assert_eq "fallback to ~/.dotfiles" "${test_home}/.dotfiles" "$DOTFILES_DATA_DIR"
+    rm -rf "$test_home"
+  )
+
+  # Test: creates ~/.dotfiles/ as default when nothing exists
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-home-empty-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    assert_eq "default to ~/.dotfiles when nothing exists" "${test_home}/.dotfiles" "$DOTFILES_DATA_DIR"
+    rm -rf "$test_home"
+  )
 }
 
 test_default_profile() {
@@ -87,5 +122,6 @@ test_bash_profile_integration
 test_generate_cache
 
 echo ""
+read -r TESTS_RUN TESTS_PASSED TESTS_FAILED < "$RESULTS_FILE"
 echo "Results: $TESTS_RUN run, $TESTS_PASSED passed, $TESTS_FAILED failed"
 [[ "$TESTS_FAILED" -eq 0 ]]
