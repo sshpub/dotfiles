@@ -684,6 +684,32 @@ PROFILE
   rm -rf "$test_home"
 }
 
+test_performance() {
+  echo "=== Performance ==="
+
+  # Test: minimal mode startup under 50ms (soft assertion)
+  # Sources repo's .bash_profile directly to avoid system shell config
+  (
+    local test_home="/tmp/dotfiles-test-perf-$$"
+    mkdir -p "$test_home"
+    local start elapsed
+    start=$(date +%s%N)
+    (
+      set +eu +o pipefail
+      DOTFILES_MODE=minimal HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    )
+    elapsed=$(( ($(date +%s%N) - start) / 1000000 ))
+    if [[ $elapsed -lt 50 ]]; then
+      pass "minimal mode under 50ms (${elapsed}ms)"
+    elif [[ $elapsed -lt 100 ]]; then
+      pass "minimal mode under 100ms (${elapsed}ms) — soft pass, close to target"
+    else
+      fail "minimal mode under 50ms" "took ${elapsed}ms"
+    fi
+    rm -rf "$test_home"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
@@ -695,6 +721,7 @@ test_bash_profile_integration
 test_exclude_mode_integration
 test_generate_cache
 test_generate_cache_types
+test_performance
 test_round_trip
 
 echo ""
