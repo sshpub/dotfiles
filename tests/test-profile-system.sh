@@ -465,12 +465,152 @@ test_mode_disable() {
   )
 }
 
+test_mode_types() {
+  echo "=== Mode types (include/exclude) ==="
+
+  # Test: default type is include
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-default-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      pass "default mode type is include"
+    else
+      fail "default mode type is include" "returned false"
+    fi
+    unset CLAUDE_CODE
+    rm -rf "$test_home"
+  )
+
+  # Test: explicit include type
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-include-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(testmode)
+    DOTFILES_MODE_testmode_TRIGGERS=(TEST_TRIGGER)
+    DOTFILES_MODE_testmode_TYPE=include
+    DOTFILES_MODE_testmode_MODULES=()
+    DOTFILES_MODE_testmode_NEVER_LOAD=()
+
+    TEST_TRIGGER=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      pass "explicit include type"
+    else
+      fail "explicit include type" "returned false"
+    fi
+    unset TEST_TRIGGER
+    rm -rf "$test_home"
+  )
+
+  # Test: exclude type
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-exclude-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(servermode)
+    DOTFILES_MODE_servermode_TRIGGERS=(SSH_TEST)
+    DOTFILES_MODE_servermode_TYPE=exclude
+    DOTFILES_MODE_servermode_MODULES=()
+    DOTFILES_MODE_servermode_NEVER_LOAD=(prompt fzf)
+
+    SSH_TEST=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      fail "exclude type not include" "returned true"
+    else
+      pass "exclude type not include"
+    fi
+    unset SSH_TEST
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load returns 0 when no mode active
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-nomode-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_ACTIVE_MODE=""
+    if dotfiles_should_load prompt; then
+      pass "should_load true when no mode"
+    else
+      fail "should_load true when no mode" "returned false"
+    fi
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load skips items in never_load for exclude mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-exclude-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(servermode)
+    DOTFILES_MODE_servermode_TRIGGERS=(SSH_TEST)
+    DOTFILES_MODE_servermode_TYPE=exclude
+    DOTFILES_MODE_servermode_MODULES=()
+    DOTFILES_MODE_servermode_NEVER_LOAD=(prompt fzf)
+
+    SSH_TEST=1
+    dotfiles_resolve_mode
+    if dotfiles_should_load prompt; then
+      fail "should_load blocks prompt in exclude mode" "returned true"
+    else
+      pass "should_load blocks prompt in exclude mode"
+    fi
+    if dotfiles_should_load git; then
+      pass "should_load allows git in exclude mode"
+    else
+      fail "should_load allows git in exclude mode" "returned false"
+    fi
+    unset SSH_TEST
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load allows everything in include mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-include-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    if dotfiles_should_load prompt; then
+      pass "should_load allows prompt in include mode"
+    else
+      fail "should_load allows prompt in include mode" "returned false"
+    fi
+    unset CLAUDE_CODE
+    rm -rf "$test_home"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
 test_default_profile
 test_mode_resolution
 test_mode_disable
+test_mode_types
 test_bash_profile_integration
 test_generate_cache
 test_round_trip

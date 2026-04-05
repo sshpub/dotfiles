@@ -82,6 +82,24 @@ dotfiles_is_minimal() {
   dotfiles_resolve_mode && [[ "$DOTFILES_ACTIVE_MODE" == "minimal" ]]
 }
 
+# --- Mode Type Helpers ---
+
+dotfiles_mode_is_include() {
+  local type_var="DOTFILES_MODE_${DOTFILES_ACTIVE_MODE}_TYPE"
+  [[ "${!type_var:-include}" == "include" ]]
+}
+
+dotfiles_should_load() {
+  [[ -z "$DOTFILES_ACTIVE_MODE" ]] && return 0
+  dotfiles_mode_is_include && return 0
+  local never_var="DOTFILES_MODE_${DOTFILES_ACTIVE_MODE}_NEVER_LOAD[@]"
+  local item
+  for item in "${!never_var}"; do
+    [[ "$item" == "$1" ]] && return 1
+  done
+  return 0
+}
+
 # --- Module Loading ---
 
 load_module() {
