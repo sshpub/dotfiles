@@ -259,7 +259,87 @@ test_bash_profile_integration() {
 
 test_generate_cache() {
   echo "=== Cache generator ==="
-  echo "(placeholder — Task 8 adds tests here)"
+
+  local test_home="/tmp/dotfiles-test-gen-$$"
+  local test_profile="${test_home}/profile.json"
+  local test_cache_dir="${test_home}/.dotfiles/cache"
+
+  # Setup
+  mkdir -p "${test_home}/.dotfiles"
+
+  # Create a test profile
+  cat > "$test_profile" <<'PROFILE'
+{
+  "modules": {
+    "git": true,
+    "kubernetes": { "shell": true, "install": true, "disable": ["kubernetes.helm"] },
+    "cloud": { "shell": true, "install": false },
+    "vim": { "shell": false, "install": true }
+  },
+  "modes": {
+    "minimal": {
+      "env_triggers": ["CI", "CLAUDE_CODE"],
+      "include_modules": ["git"],
+      "never_load": ["prompt"]
+    },
+    "server": {
+      "env_triggers": ["SSH_SESSION"],
+      "include_modules": ["git", "safety"],
+      "never_load": ["prompt", "fzf"]
+    }
+  }
+}
+PROFILE
+
+  # Test: generate cache from explicit path
+  (
+    DOTFILES_DATA_DIR="${test_home}/.dotfiles" \
+      bash "${DOTFILES_DIR}/setup/generate-cache.sh" "$test_profile" > /dev/null
+
+    assert_file_exists "cache file created" "${test_cache_dir}/profile.sh"
+
+    # Source the cache and check values
+    source "${test_cache_dir}/profile.sh"
+
+    # git, kubernetes, cloud should be enabled (shell: true). vim has shell: false — excluded.
+    assert_contains "git enabled" "git" "${DOTFILES_ENABLED_MODULES[*]}"
+    assert_contains "kubernetes enabled" "kubernetes" "${DOTFILES_ENABLED_MODULES[*]}"
+    assert_contains "cloud enabled" "cloud" "${DOTFILES_ENABLED_MODULES[*]}"
+    local modules_str="${DOTFILES_ENABLED_MODULES[*]}"
+    if [[ " $modules_str " != *" vim "* ]]; then
+      pass "vim excluded (shell: false)"
+    else
+      fail "vim excluded (shell: false)" "vim was included"
+    fi
+
+    # Disabled sections
+    assert_contains "kubernetes.helm disabled" "kubernetes.helm" "${DOTFILES_DISABLED_SECTIONS[*]}"
+
+    # Modes
+    assert_eq "two modes" "2" "${#DOTFILES_MODE_NAMES[@]}"
+    assert_eq "first mode is minimal" "minimal" "${DOTFILES_MODE_NAMES[0]}"
+    assert_eq "second mode is server" "server" "${DOTFILES_MODE_NAMES[1]}"
+    assert_contains "CI in minimal triggers" "CI" "${DOTFILES_MODE_minimal_TRIGGERS[*]}"
+    assert_contains "git in minimal modules" "git" "${DOTFILES_MODE_minimal_MODULES[*]}"
+    assert_contains "SSH_SESSION in server triggers" "SSH_SESSION" "${DOTFILES_MODE_server_TRIGGERS[*]}"
+  )
+
+  # Test: no profile = message and no cache
+  (
+    local empty_home="/tmp/dotfiles-test-gen-empty-$$"
+    mkdir -p "${empty_home}/.dotfiles"
+    DOTFILES_DATA_DIR="${empty_home}/.dotfiles" \
+      bash "${DOTFILES_DIR}/setup/generate-cache.sh" 2>/dev/null
+    if [[ ! -f "${empty_home}/.dotfiles/cache/profile.sh" ]]; then
+      pass "no cache when no profile found"
+    else
+      fail "no cache when no profile found" "cache was written"
+    fi
+    rm -rf "$empty_home"
+  )
+
+  # Cleanup
+  rm -rf "$test_home"
 }
 
 # --- Run ---
