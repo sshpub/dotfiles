@@ -342,6 +342,67 @@ PROFILE
   rm -rf "$test_home"
 }
 
+test_round_trip() {
+  echo "=== Round-trip: profile → generate → loader ==="
+
+  local test_home="/tmp/dotfiles-test-rt-$$"
+  mkdir -p "${test_home}/.dotfiles"
+
+  # Write a profile
+  cat > "${test_home}/.dotfiles.json" <<'PROFILE'
+{
+  "modules": {
+    "git": true,
+    "modern-tools": true,
+    "cloud": { "shell": true, "install": false },
+    "kubernetes": { "shell": true, "install": true, "disable": ["kubernetes.helm", "kubernetes.istio"] }
+  },
+  "modes": {
+    "ci": {
+      "env_triggers": ["CI", "GITHUB_ACTIONS"],
+      "include_modules": ["git"],
+      "never_load": ["prompt"]
+    }
+  }
+}
+PROFILE
+
+  # Generate cache
+  HOME="$test_home" DOTFILES_DATA_DIR="${test_home}/.dotfiles" \
+    bash "${DOTFILES_DIR}/setup/generate-cache.sh" > /dev/null
+
+  assert_file_exists "cache generated" "${test_home}/.dotfiles/cache/profile.sh"
+
+  # Load via the full chain
+  (
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    DOTFILES_DATA_DIR="${test_home}/.dotfiles"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    # Check modules loaded from cache
+    assert_eq "4 modules enabled" "4" "${#DOTFILES_ENABLED_MODULES[@]}"
+    assert_contains "git enabled" "git" "${DOTFILES_ENABLED_MODULES[*]}"
+    assert_contains "cloud enabled" "cloud" "${DOTFILES_ENABLED_MODULES[*]}"
+
+    # Check disabled sections
+    assert_contains "kubernetes.helm disabled" "kubernetes.helm" "${DOTFILES_DISABLED_SECTIONS[*]}"
+    assert_contains "kubernetes.istio disabled" "kubernetes.istio" "${DOTFILES_DISABLED_SECTIONS[*]}"
+
+    # Check mode
+    assert_eq "mode name is ci" "ci" "${DOTFILES_MODE_NAMES[0]}"
+
+    # Trigger the mode
+    CI=true
+    dotfiles_resolve_mode
+    assert_eq "CI triggers ci mode" "ci" "$DOTFILES_ACTIVE_MODE"
+    unset CI
+  )
+
+  rm -rf "$test_home"
+}
+
 # --- Run ---
 
 test_data_dir_resolution
@@ -349,6 +410,7 @@ test_default_profile
 test_mode_resolution
 test_bash_profile_integration
 test_generate_cache
+test_round_trip
 
 echo ""
 read -r TESTS_RUN TESTS_PASSED TESTS_FAILED < "$RESULTS_FILE"
