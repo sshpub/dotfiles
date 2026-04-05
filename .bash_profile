@@ -37,14 +37,17 @@ _dotfiles_source() { [[ -f "$1" ]] && . "$1"; }
 
 # ─── 2. Mode Check ───────────────────────────────────────────────────
 if dotfiles_resolve_mode; then
-    dotfiles_load_mode_extras
-    return 0 2>/dev/null || exit 0
+    if dotfiles_mode_is_include; then
+        dotfiles_load_mode_extras
+        return 0 2>/dev/null || exit 0
+    fi
+    # Exclude mode: continue full load, never_load enforced below
 fi
 
 # ─── 3. Core Interactive ──────────────────────────────────────────────
 . "${DOTFILES_DIR}/core/aliases.sh"
 . "${DOTFILES_DIR}/core/functions.sh"
-. "${DOTFILES_DIR}/core/completions.sh"
+dotfiles_should_load completions && . "${DOTFILES_DIR}/core/completions.sh"
 
 # ─── 4. Platform Layer ────────────────────────────────────────────────
 if is_wsl; then
@@ -73,9 +76,9 @@ unset _f
 _dotfiles_source "${HOME}/.extra"
 
 # ─── 9. Prompt ───────────────────────────────────────────────────────
-. "${DOTFILES_DIR}/core/prompt.sh"
+dotfiles_should_load prompt && . "${DOTFILES_DIR}/core/prompt.sh"
 
 # ─── 10. Sync Check ──────────────────────────────────────────────────
-_dotfiles_source "${DOTFILES_DIR}/core/sync-check.sh"
+dotfiles_should_load sync-check && _dotfiles_source "${DOTFILES_DIR}/core/sync-check.sh"
 
 unset -f _dotfiles_source

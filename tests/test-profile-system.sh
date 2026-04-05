@@ -403,13 +403,325 @@ PROFILE
   rm -rf "$test_home"
 }
 
+test_mode_disable() {
+  echo "=== Mode disable (DOTFILES_MODE=none/false/off) ==="
+
+  # Test: DOTFILES_MODE=none disables mode even when trigger is set
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=none
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=none disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=none disables"
+    fi
+    assert_eq "active mode empty with none" "" "$DOTFILES_ACTIVE_MODE"
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+
+  # Test: DOTFILES_MODE=false disables
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-false-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=false
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=false disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=false disables"
+    fi
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+
+  # Test: DOTFILES_MODE=off disables
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-disable-off-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    DOTFILES_MODE=off
+    if dotfiles_resolve_mode; then
+      fail "DOTFILES_MODE=off disables" "should have returned 1"
+    else
+      pass "DOTFILES_MODE=off disables"
+    fi
+    unset CLAUDE_CODE DOTFILES_MODE
+    rm -rf "$test_home"
+  )
+}
+
+test_mode_types() {
+  echo "=== Mode types (include/exclude) ==="
+
+  # Test: default type is include
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-default-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      pass "default mode type is include"
+    else
+      fail "default mode type is include" "returned false"
+    fi
+    unset CLAUDE_CODE
+    rm -rf "$test_home"
+  )
+
+  # Test: explicit include type
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-include-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(testmode)
+    DOTFILES_MODE_testmode_TRIGGERS=(TEST_TRIGGER)
+    DOTFILES_MODE_testmode_TYPE=include
+    DOTFILES_MODE_testmode_MODULES=()
+    DOTFILES_MODE_testmode_NEVER_LOAD=()
+
+    TEST_TRIGGER=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      pass "explicit include type"
+    else
+      fail "explicit include type" "returned false"
+    fi
+    unset TEST_TRIGGER
+    rm -rf "$test_home"
+  )
+
+  # Test: exclude type
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-type-exclude-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(servermode)
+    DOTFILES_MODE_servermode_TRIGGERS=(SSH_TEST)
+    DOTFILES_MODE_servermode_TYPE=exclude
+    DOTFILES_MODE_servermode_MODULES=()
+    DOTFILES_MODE_servermode_NEVER_LOAD=(prompt fzf)
+
+    SSH_TEST=1
+    dotfiles_resolve_mode
+    if dotfiles_mode_is_include; then
+      fail "exclude type not include" "returned true"
+    else
+      pass "exclude type not include"
+    fi
+    unset SSH_TEST
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load returns 0 when no mode active
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-nomode-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_ACTIVE_MODE=""
+    if dotfiles_should_load prompt; then
+      pass "should_load true when no mode"
+    else
+      fail "should_load true when no mode" "returned false"
+    fi
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load skips items in never_load for exclude mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-exclude-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    DOTFILES_MODE_NAMES=(servermode)
+    DOTFILES_MODE_servermode_TRIGGERS=(SSH_TEST)
+    DOTFILES_MODE_servermode_TYPE=exclude
+    DOTFILES_MODE_servermode_MODULES=()
+    DOTFILES_MODE_servermode_NEVER_LOAD=(prompt fzf)
+
+    SSH_TEST=1
+    dotfiles_resolve_mode
+    if dotfiles_should_load prompt; then
+      fail "should_load blocks prompt in exclude mode" "returned true"
+    else
+      pass "should_load blocks prompt in exclude mode"
+    fi
+    if dotfiles_should_load git; then
+      pass "should_load allows git in exclude mode"
+    else
+      fail "should_load allows git in exclude mode" "returned false"
+    fi
+    unset SSH_TEST
+    rm -rf "$test_home"
+  )
+
+  # Test: dotfiles_should_load allows everything in include mode
+  (
+    unset DOTFILES_DATA_DIR
+    local test_home="/tmp/dotfiles-test-shouldload-include-$$"
+    mkdir -p "$test_home"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/platform.sh"
+    HOME="$test_home" source "${DOTFILES_DIR}/core/loader.sh"
+
+    CLAUDE_CODE=1
+    dotfiles_resolve_mode
+    if dotfiles_should_load prompt; then
+      pass "should_load allows prompt in include mode"
+    else
+      fail "should_load allows prompt in include mode" "returned false"
+    fi
+    unset CLAUDE_CODE
+    rm -rf "$test_home"
+  )
+}
+
+test_exclude_mode_integration() {
+  echo "=== Exclude mode integration ==="
+
+  # Test: exclude mode loads modules but skips never_load items
+  (
+    set +eu +o pipefail
+    unset CLAUDE_CODE CODEX GEMINI_CLI CI DOTFILES_MODE DOTFILES_DATA_DIR
+    unset OPENCODE GROK_CLI GITHUB_ACTIONS GITLAB_CI
+    local test_home="/tmp/dotfiles-test-exclude-int-$$"
+    mkdir -p "${test_home}/.dotfiles/cache"
+
+    # Write a profile cache with an exclude mode
+    cat > "${test_home}/.dotfiles/cache/profile.sh" <<'CACHE'
+DOTFILES_ENABLED_MODULES=(git modern-tools)
+DOTFILES_DISABLED_SECTIONS=()
+DOTFILES_MODE_NAMES=(testexclude)
+DOTFILES_MODE_testexclude_TRIGGERS=(TEST_EXCLUDE)
+DOTFILES_MODE_testexclude_TYPE=exclude
+DOTFILES_MODE_testexclude_MODULES=()
+DOTFILES_MODE_testexclude_NEVER_LOAD=(prompt sync-check)
+CACHE
+
+    TEST_EXCLUDE=1 HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    set -eu -o pipefail
+
+    assert_eq "exclude mode activated" "testexclude" "${DOTFILES_ACTIVE_MODE:-}"
+
+    # Modules should have loaded (from cache, full chain)
+    if [[ ${#DOTFILES_ENABLED_MODULES[@]} -gt 0 ]]; then
+      pass "exclude mode loads modules"
+    else
+      fail "exclude mode loads modules" "no modules loaded"
+    fi
+
+    unset TEST_EXCLUDE
+    rm -rf "$test_home"
+  )
+}
+
+test_generate_cache_types() {
+  echo "=== Cache generator with mode types ==="
+
+  local test_home="/tmp/dotfiles-test-gen-types-$$"
+  local test_profile="${test_home}/profile.json"
+
+  mkdir -p "${test_home}/.dotfiles"
+
+  cat > "$test_profile" <<'PROFILE'
+{
+  "modules": { "git": true },
+  "modes": {
+    "minimal": {
+      "type": "include",
+      "env_triggers": ["CI"],
+      "include_modules": ["git"],
+      "never_load": []
+    },
+    "server": {
+      "type": "exclude",
+      "env_triggers": ["SSH_SESSION"],
+      "include_modules": [],
+      "never_load": ["prompt", "fzf"]
+    }
+  }
+}
+PROFILE
+
+  (
+    DOTFILES_DATA_DIR="${test_home}/.dotfiles" \
+      bash "${DOTFILES_DIR}/setup/generate-cache.sh" "$test_profile" > /dev/null
+
+    source "${test_home}/.dotfiles/cache/profile.sh"
+
+    assert_eq "minimal type is include" "include" "${DOTFILES_MODE_minimal_TYPE}"
+    assert_eq "server type is exclude" "exclude" "${DOTFILES_MODE_server_TYPE}"
+  )
+
+  rm -rf "$test_home"
+}
+
+test_performance() {
+  echo "=== Performance ==="
+
+  # Test: minimal mode startup under 50ms (soft assertion)
+  # Sources repo's .bash_profile directly to avoid system shell config
+  (
+    local test_home="/tmp/dotfiles-test-perf-$$"
+    mkdir -p "$test_home"
+    local start elapsed
+    start=$(date +%s%N)
+    (
+      set +eu +o pipefail
+      DOTFILES_MODE=minimal HOME="$test_home" source "${DOTFILES_DIR}/.bash_profile" 2>/dev/null
+    )
+    elapsed=$(( ($(date +%s%N) - start) / 1000000 ))
+    if [[ $elapsed -lt 50 ]]; then
+      pass "minimal mode under 50ms (${elapsed}ms)"
+    elif [[ $elapsed -lt 100 ]]; then
+      pass "minimal mode under 100ms (${elapsed}ms) — soft pass, close to target"
+    else
+      fail "minimal mode under 50ms" "took ${elapsed}ms"
+    fi
+    rm -rf "$test_home"
+  )
+}
+
 # --- Run ---
 
 test_data_dir_resolution
 test_default_profile
 test_mode_resolution
+test_mode_disable
+test_mode_types
 test_bash_profile_integration
+test_exclude_mode_integration
 test_generate_cache
+test_generate_cache_types
+test_performance
 test_round_trip
 
 echo ""

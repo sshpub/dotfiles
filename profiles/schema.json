@@ -105,6 +105,11 @@
           "additionalProperties": false,
           "properties": {
             "_comment": { "type": "string" },
+            "type": {
+              "type": "string",
+              "enum": ["include", "exclude"],
+              "description": "Mode type — include (early return, load only include_modules) or exclude (full load, skip never_load). Defaults to include."
+            },
             "env_triggers": {
               "type": "array",
               "items": { "type": "string" },

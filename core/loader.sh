@@ -27,6 +27,7 @@ _dotfiles_default_profile() {
 
   # Hardcoded minimal mode defaults
   DOTFILES_MODE_NAMES=(minimal)
+  DOTFILES_MODE_minimal_TYPE=include
   DOTFILES_MODE_minimal_TRIGGERS=(
     CLAUDE_CODE CODEX GEMINI_CLI OPENCODE GROK_CLI
     CI GITHUB_ACTIONS GITLAB_CI
@@ -52,6 +53,11 @@ dotfiles_section() {
 # --- Mode Resolution ---
 
 dotfiles_resolve_mode() {
+  # Explicit disable
+  if [[ "${DOTFILES_MODE:-}" =~ ^(none|false|off)$ ]]; then
+    DOTFILES_ACTIVE_MODE=""
+    return 1
+  fi
   # Env var override
   if [[ -n "${DOTFILES_MODE:-}" ]]; then
     DOTFILES_ACTIVE_MODE="$DOTFILES_MODE"
@@ -75,6 +81,24 @@ dotfiles_resolve_mode() {
 # Backward compat wrapper
 dotfiles_is_minimal() {
   dotfiles_resolve_mode && [[ "$DOTFILES_ACTIVE_MODE" == "minimal" ]]
+}
+
+# --- Mode Type Helpers ---
+
+dotfiles_mode_is_include() {
+  local type_var="DOTFILES_MODE_${DOTFILES_ACTIVE_MODE}_TYPE"
+  [[ "${!type_var:-include}" == "include" ]]
+}
+
+dotfiles_should_load() {
+  [[ -z "$DOTFILES_ACTIVE_MODE" ]] && return 0
+  dotfiles_mode_is_include && return 0
+  local never_var="DOTFILES_MODE_${DOTFILES_ACTIVE_MODE}_NEVER_LOAD[@]"
+  local item
+  for item in "${!never_var}"; do
+    [[ "$item" == "$1" ]] && return 1
+  done
+  return 0
 }
 
 # --- Module Loading ---
@@ -108,7 +132,7 @@ load_module() {
 dotfiles_load_modules() {
   local mod
   for mod in "${DOTFILES_ENABLED_MODULES[@]}"; do
-    load_module "$mod"
+    dotfiles_should_load "$mod" && load_module "$mod"
   done
 }
 
@@ -118,4 +142,10 @@ dotfiles_load_mode_extras() {
   for mod in "${!modules_var}"; do
     load_module "$mod"
   done
+}
+
+# --- Test Helper ---
+
+dotfiles_test_mode() {
+  DOTFILES_MODE="${1:-minimal}" bash -l
 }
