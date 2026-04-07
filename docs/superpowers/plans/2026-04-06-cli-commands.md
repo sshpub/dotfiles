@@ -20,7 +20,7 @@
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `pkg/profile/profile.go` | Rewrite (replace doc.go) | Profile struct, loading, saving, dir resolution |
+| `pkg/profile/profile.go` | Already exists | Profile struct, loading, saving, dir resolution (Task 1 pre-completed) |
 | `pkg/profile/platform.go` | Create | Platform detection in Go |
 | `pkg/profile/cache.go` | Create | Cache generation (platform.sh + profile.sh) |
 | `pkg/module/module.go` | Rewrite (replace doc.go) | Module discovery, loading, validation |
@@ -30,7 +30,7 @@
 | `cmd/doctor.go` | Rewrite | Real health checks |
 | `cmd/mode.go` | Create | Replaces cmd/minimal.go |
 | `cmd/minimal.go` | Delete | Replaced by cmd/mode.go |
-| `pkg/profile/profile_test.go` | Create | Profile package tests |
+| `pkg/profile/profile_test.go` | Already exists | Profile package tests (Task 1 pre-completed) |
 | `pkg/profile/platform_test.go` | Create | Platform detection tests |
 | `pkg/profile/cache_test.go` | Create | Cache generation tests |
 | `pkg/module/module_test.go` | Create | Module package tests |
@@ -39,13 +39,15 @@
 
 ## Task 1: `pkg/profile` — Profile loading, saving, dir resolution
 
+> **PRE-COMPLETED:** `profile.go` and `profile_test.go` already exist with full implementation (from #22 scaffold). No `doc.go` to delete. Skip to Task 2.
+
 **Files:**
-- Rewrite: `~/code/sshpub/dotfiles-cli/pkg/profile/profile.go` (replaces doc.go)
-- Delete: `~/code/sshpub/dotfiles-cli/pkg/profile/doc.go`
+- Exists: `~/code/sshpub/dotfiles-cli/pkg/profile/profile.go` (already implemented)
+- Exists: `~/code/sshpub/dotfiles-cli/pkg/profile/profile_test.go` (already implemented)
 
-- [ ] **Step 1: Delete doc.go, create profile.go**
+- [x] **Step 1: ~~Delete doc.go, create profile.go~~ Already done**
 
-Delete `pkg/profile/doc.go`. Create `pkg/profile/profile.go`:
+`pkg/profile/profile.go` already exists with the implementation below (no `doc.go` to delete).
 
 ```go
 package profile
@@ -55,6 +57,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 // Profile mirrors the ~/.dotfiles.json schema.
@@ -95,15 +98,6 @@ type Registry struct {
 	Name    string `json:"name"`
 	URL     string `json:"url"`
 	Private bool   `json:"private,omitempty"`
-}
-
-// ModuleConfig represents the object form of a module entry.
-// The map value is either bool (true) or this struct.
-type ModuleConfig struct {
-	Comment string   `json:"_comment,omitempty"`
-	Shell   bool     `json:"shell,omitempty"`
-	Install bool     `json:"install,omitempty"`
-	Disable []string `json:"disable,omitempty"`
 }
 
 // FindProfile searches the standard chain and returns the path to the first
@@ -191,7 +185,7 @@ func FindDataDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(home, ".dotfiles")
+		return filepath.Join(os.Getenv("HOME"), ".dotfiles")
 	}
 
 	candidates := []string{
@@ -209,8 +203,8 @@ func FindDataDir() string {
 	return filepath.Join(home, ".dotfiles")
 }
 
-// EnabledModules returns the list of module names that have shell loading
-// enabled. A module entry of `true` (bool) or `{"shell": true}` counts.
+// EnabledModules returns the sorted list of module names that have shell
+// loading enabled. A module entry of `true` (bool) or `{"shell": true}` counts.
 func (p *Profile) EnabledModules() []string {
 	if p.Modules == nil {
 		return nil
@@ -229,10 +223,11 @@ func (p *Profile) EnabledModules() []string {
 			}
 		}
 	}
+	sort.Strings(enabled)
 	return enabled
 }
 
-// DisabledSections returns all disabled sections across all modules.
+// DisabledSections returns all disabled sections across all modules, sorted.
 func (p *Profile) DisabledSections() []string {
 	if p.Modules == nil {
 		return nil
@@ -257,49 +252,24 @@ func (p *Profile) DisabledSections() []string {
 			}
 		}
 	}
+	sort.Strings(disabled)
 	return disabled
 }
 ```
 
 Key behaviors:
 - `FindProfile` returns `("", nil)` when no profile exists (not an error — loader falls back to defaults)
-- `EnabledModules` handles both `true` shorthand and `{"shell": true}` object form
-- `DisabledSections` aggregates `disable` arrays from all module objects
-- `FindDataDir` error path still returns `~/.dotfiles` default (matches shell behavior)
+- `EnabledModules` handles both `true` shorthand and `{"shell": true}` object form, returns sorted
+- `DisabledSections` aggregates `disable` arrays from all module objects, returns sorted
+- `FindDataDir` error path falls back to `os.Getenv("HOME")/.dotfiles` (matches shell behavior)
 
-- [ ] **Step 2: Create profile_test.go**
+- [x] **Step 2: ~~Create profile_test.go~~ Already done**
 
-Create `pkg/profile/profile_test.go` with tests for:
-- `FindDataDir` — env var override, fallback to default
-- `LoadProfile` — valid JSON, invalid JSON, missing file
-- `SaveProfile` — round-trip (load → save → load, compare)
-- `EnabledModules` — bool shorthand, object form, mixed
-- `DisabledSections` — collects from multiple modules
-- `FindDotfilesDir` — env var, profile field, neither (error)
-- `FindProfile` — env var, search chain (use `t.TempDir()` for isolation)
+`pkg/profile/profile_test.go` already exists with tests covering all functions.
 
-Use `t.Setenv()` for env var tests (auto-restores).
+- [x] **Step 3: ~~Verify tests pass~~ Already done**
 
-- [ ] **Step 3: Verify tests pass**
-
-```bash
-cd ~/code/sshpub/dotfiles-cli && go test ./pkg/profile/...
-```
-
-- [ ] **Step 4: Commit**
-
-```bash
-cd ~/code/sshpub/dotfiles-cli
-git add pkg/profile/
-git rm pkg/profile/doc.go 2>/dev/null || true
-git commit -m "feat(profile): add profile loading, saving, and dir resolution
-
-FindProfile search chain, LoadProfile/SaveProfile JSON handling,
-FindDotfilesDir/FindDataDir with env var overrides matching shell behavior.
-EnabledModules handles both bool shorthand and object form.
-
-Part of #25"
-```
+- [x] **Step 4: ~~Commit~~ Already committed as part of #22 scaffold**
 
 ---
 
@@ -552,7 +522,7 @@ func GeneratePlatformCache(dataDir string, info *PlatformInfo) error {
 
 	var b strings.Builder
 	b.WriteString("# Generated by dotfiles — do not edit\n")
-	b.WriteString("# Re-generate: dotfiles cache rebuild\n")
+	b.WriteString("# Re-generate: dotfiles cache rebuild\n") // Note: shell uses "dotfiles_refresh_platform" — CLI updates this
 	fmt.Fprintf(&b, "DOTFILES_OS=\"%s\"\n", info.OS)
 	fmt.Fprintf(&b, "DOTFILES_ARCH=\"%s\"\n", info.Arch)
 	fmt.Fprintf(&b, "DOTFILES_WSL=\"%s\"\n", wsl)
@@ -627,7 +597,7 @@ func ClearCache(dataDir string) error {
 ```
 
 Key behaviors:
-- Platform cache output is variable-for-variable identical to `_dotfiles_write_platform_cache` in `core/platform.sh`
+- Platform cache variables are identical to `_dotfiles_write_platform_cache` in `core/platform.sh` (comment line intentionally updated to reference CLI command)
 - Profile cache output matches `setup/generate-cache.sh` — same variable names, same bash array format
 - Empty lists produce `DOTFILES_ENABLED_MODULES=()` (empty parens, no spaces)
 - Module and mode lists are sorted for deterministic output
@@ -1864,8 +1834,47 @@ Task 4 (pkg/module)   ──┼──→ Task 9 (cmd/doctor)
 ```
 
 **Parallel opportunities:**
-- Tasks 1+2+3 are in the same package but independent files — can be one combined task or sequential
+- Task 1 is pre-completed (profile.go + tests already exist from #22). Tasks 2+3 can start immediately
 - Task 4 is fully independent of Tasks 1-3
 - Tasks 5, 6, 7, 8 can run in parallel once Tasks 1-3 are done
 - Task 9 depends on all packages
 - Task 10 is final gate
+
+---
+
+## Verification Summary
+
+Verified 2026-04-07 against `sshpub/dotfiles` (main) and `sshpub/dotfiles-cli` (main). **32 claims checked.**
+
+**Confirmed (23):**
+- Spec file `docs/superpowers/specs/2026-04-06-cli-commands-design.md` exists
+- Go module path `github.com/sshpub/dotfiles-cli`, Go 1.25, Cobra dependency
+- `cmd/platform.go`, `cmd/cache.go`, `cmd/doctor.go`, `cmd/profile.go`, `cmd/minimal.go` all exist as stubs
+- `pkg/module/doc.go` exists (Task 4 correctly plans to replace it)
+- `core/platform.sh`, `setup/generate-cache.sh`, `modules/schema.json` all exist
+- Platform cache variables match `_dotfiles_write_platform_cache` exactly (9 variables, same order)
+- `platform_info()` output format matches plan's `cmd/platform.go` output
+- Package manager detection order: apt, dnf, pacman, zypper, yum, brew — matches shell
+- Homebrew prefix logic: arm64 darwin → `/opt/homebrew`, else `/usr/local`; linux → `/home/linuxbrew/.linuxbrew` — matches shell
+- Module schema validation patterns (`^[a-z][a-z0-9-]*$`, `^\d+\.\d+\.\d+$`) match `modules/schema.json`
+- Schema platform enum `["macos", "linux", "wsl"]` matches plan validation
+- `InstallRecipes` fields (brew, apt, dnf, pacman, snap, zypper, inherit) match schema `$defs/install_recipes`
+- Profile cache format matches `setup/generate-cache.sh` structure (variables, arrays, modes)
+- `_dotfiles_default_profile` exists in `core/loader.sh:19` — hardcoded minimal triggers confirmed
+- Minimal mode triggers list matches: `CLAUDE_CODE CODEX GEMINI_CLI OPENCODE GROK_CLI CI GITHUB_ACTIONS GITLAB_CI`
+- `dotfiles_test_mode` exists in `core/loader.sh:149` — uses `DOTFILES_MODE=X bash -l`
+- Cache subcommands (rebuild, clear) match existing stub structure
+- Profile subcommands (show, edit, wizard, export) match existing stub structure
+
+**Corrected (9):**
+- File Map: `pkg/profile/profile.go` changed from "Rewrite (replace doc.go)" to "Already exists" — `doc.go` does not exist, `profile.go` is fully implemented
+- File Map: `pkg/profile/profile_test.go` changed from "Create" to "Already exists" — comprehensive tests already committed
+- Task 1: Marked all steps as pre-completed — no `doc.go` to delete, implementation already exists from #22
+- Plan code `EnabledModules()`: added `sort.Strings(enabled)` to match actual implementation
+- Plan code `DisabledSections()`: added `sort.Strings(disabled)` to match actual implementation
+- Plan code imports: added `"sort"` to import block
+- Plan code `FindDataDir()` error fallback: changed `filepath.Join(home, ".dotfiles")` → `filepath.Join(os.Getenv("HOME"), ".dotfiles")` — `home` is empty after `UserHomeDir()` error
+- Removed unused `ModuleConfig` struct (defined but never referenced in any plan code)
+- Platform cache comment: annotated that `"dotfiles cache rebuild"` intentionally replaces shell's `"dotfiles_refresh_platform"`
+
+**Unverifiable (0):** All claims checked against source.
