@@ -29,18 +29,18 @@ New functions added to the existing package:
 
 - **`Enable(profilePath string, moduleName string, dotfilesDir string) error`** — verify module dir exists, set `modules[name] = true` in profile, save, rebuild cache
 - **`Disable(profilePath string, moduleName string) error`** — set `modules[name] = false` in profile, save, rebuild cache
-- **`ExtractSection(dotfilesDir string, section string) (string, error)`** — parse shell files for `dotfiles_section "X" && {` blocks, return the code body. Section format: `module.section` (e.g. `git.shortcuts`)
-- **`ResetOverride(overrideDir string, section string) error`** — delete the override file
-- **`Scaffold(dotfilesDir string, name string) error`** — create module dir, module.json, aliases.sh with guard template, CLAUDE.md
+- **`ExtractSection(mod *Module, section string) (code string, sourceFile string, err error)`** — parse shell files for `dotfiles_section "X" && {` blocks, return the code body and source filename. Section format: `module.section` (e.g. `git.shortcuts`)
+- **`ResetOverride(repoOverrideDir string, localOverrideDir string, section string) []string`** — delete override files from both repo and local dirs, return removed paths
+- **`Scaffold(dotfilesDir string, name string) (string, error)`** — create module dir, module.json, aliases.sh with guard template, CLAUDE.md. Returns the created directory path.
 - **`ValidateSectionGuards(mod *Module) []string`** — scan shell files in load_order, compare declared sections in module.json against actual `dotfiles_section` calls. Report mismatches.
 
 ### `pkg/installer` — new (replaces doc.go)
 
 Handles package installation for any module.
 
-- **`ResolveRecipes(mod *Module, platform *PlatformInfo) (manager string, packages []string, err error)`** — look up install recipes for detected platform, handle `inherit` field, return the package manager name and package list
+- **`ResolveRecipes(platformOS string, platformPkgManager string, recipes map[string]*InstallRecipes) (manager string, packages []string, err error)`** — look up install recipes for detected platform, handle `inherit` field. Takes primitives to avoid import cycles with pkg/module.
 - **`Install(manager string, packages []string, dryRun bool) error`** — execute or print package manager command. Prepends `sudo` for apt/dnf/pacman/zypper/yum if not root. Groups all packages into a single command.
-- **`PlatformInfo`** — reuses `profile.PlatformInfo` (passed in, not imported directly to avoid circular dep)
+- **`InstallRecipes`** — standalone struct mirroring module.InstallRecipes fields. Cmd layer converts between them.
 
 ### `cmd/module.go` — rewrite
 
